@@ -9,6 +9,16 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
+      '/PDFQuill/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/PDFQuill/, ''),
+      },
+      '/PDFQuill/download': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/PDFQuill/, ''),
+      },
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,

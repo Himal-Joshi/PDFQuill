@@ -29,7 +29,7 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? '' : 'https://himal-joshi.github.io/PDFQuill');
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? '/PDFQuill' : 'https://himal-joshi.github.io/PDFQuill');
 
 type Tool = 'merge' | 'split' | 'compress' | 'rotate' | 'watermark' | 'page-numbers' | 'organize' | 'convert';
 
@@ -115,7 +115,7 @@ const tools: ToolConfig[] = [
 ];
 
 function App() {
-  const [view, setView] = useState<'main' | 'pricing' | 'solutions' | 'privacy' | 'terms'>('main');
+  const [view, setView] = useState<'main' | 'pricing' | 'solutions' | 'privacy' | 'terms' | 'login' | 'docs' | 'get-started'>('main');
   const [activeTool, setActiveTool] = useState<Tool | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -270,8 +270,8 @@ function App() {
             >
               {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
             </button>
-            <button className="hidden sm:block btn btn-ghost">Login</button>
-            <button className="btn btn-primary">Get Started</button>
+            <button onClick={() => setView('login')} className="hidden sm:block btn btn-ghost">Login</button>
+            <button onClick={() => setView('get-started')} className="btn btn-primary">Get Started</button>
           </div>
         </div>
       </nav>
@@ -283,6 +283,9 @@ function App() {
             {view === 'solutions' && <SolutionsView />}
             {view === 'privacy' && <PrivacyView />}
             {view === 'terms' && <TermsView />}
+            {view === 'login' && <LoginView />}
+            {view === 'docs' && <DocsView />}
+            {view === 'get-started' && <GetStartedView />}
             <button onClick={goHome} className="mt-12 btn btn-secondary">Back to Home</button>
           </div>
         ) : activeTool === null ? (
@@ -312,10 +315,10 @@ function App() {
                     Merge, split, compress, and convert your documents with a premium toolkit designed for modern workflows. Fast, private, and 100% free.
                   </p>
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <button className="btn btn-primary px-8 py-4 text-base w-full sm:w-auto">
+                    <button onClick={() => setView('solutions')} className="btn btn-primary px-8 py-4 text-base w-full sm:w-auto">
                       Explore All Tools
                     </button>
-                    <button className="btn btn-secondary px-8 py-4 text-base w-full sm:w-auto">
+                    <button onClick={() => setView('docs')} className="btn btn-secondary px-8 py-4 text-base w-full sm:w-auto">
                       View Documentation
                     </button>
                   </div>
@@ -832,6 +835,69 @@ function TermsView() {
       <p className="text-slate-600 dark:text-slate-400">PDFQuill is provided "as is" without warranty of any kind. We are not responsible for any data loss or issues arising from the use of our tools.</p>
       <h3 className="text-2xl font-bold mt-8 mb-4 text-slate-900 dark:text-white">2. Prohibited Uses</h3>
       <p className="text-slate-600 dark:text-slate-400">You may not use this service for any illegal activities or to process malicious content.</p>
+    </div>
+  );
+}
+
+function LoginView() {
+  return (
+    <div className="max-w-md mx-auto card p-10 text-center">
+      <h2 className="text-3xl font-display font-extrabold mb-6 text-slate-900 dark:text-white">Welcome Back</h2>
+      <p className="text-slate-600 dark:text-slate-400 mb-8">Access your personalized PDF toolkit and saved configurations.</p>
+      <div className="space-y-4">
+        <button className="btn btn-primary w-full py-4 font-bold">Continue with Google</button>
+        <button className="btn btn-secondary w-full py-4 font-bold">Continue with GitHub</button>
+      </div>
+      <p className="mt-8 text-sm text-slate-500">Don't have an account? <span className="text-primary font-bold cursor-pointer">Sign up</span></p>
+    </div>
+  );
+}
+
+function DocsView() {
+  const sections = [
+    { title: 'Getting Started', topics: ['Quick Start Guide', 'System Requirements', 'Core Features Overview'] },
+    { title: 'PDF Tools', topics: ['Merging Documents', 'Splitting & Extracting', 'Compression Techniques', 'Security & Protection'] },
+    { title: 'API Reference', topics: ['Authentication', 'Endpoint Usage', 'Rate Limits', 'SDKs & Libraries'] },
+  ];
+
+  return (
+    <div>
+      <h2 className="text-4xl font-display font-extrabold mb-12 text-slate-900 dark:text-white">Documentation</h2>
+      <div className="grid gap-12">
+        {sections.map((s) => (
+          <div key={s.title}>
+            <h3 className="text-xl font-bold text-primary uppercase tracking-widest mb-6">{s.title}</h3>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {s.topics.map((t) => (
+                <div key={t} className="card p-4 hover:border-primary/50 transition-colors cursor-pointer group">
+                  <span className="font-bold text-slate-900 dark:text-white group-hover:text-primary">{t}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function GetStartedView() {
+  return (
+    <div className="text-center">
+      <h2 className="text-4xl md:text-5xl font-display font-extrabold mb-8 text-slate-900 dark:text-white">Start Building with PDFQuill</h2>
+      <p className="text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mb-12">Join thousands of users and developers using the world's most modern and private PDF toolkit.</p>
+      <div className="grid sm:grid-cols-2 gap-8 max-w-3xl mx-auto">
+        <div className="card p-10 bg-primary/5 border-primary/20">
+          <h3 className="text-2xl font-bold mb-4 text-slate-900 dark:text-white">For Individuals</h3>
+          <p className="text-slate-600 dark:text-slate-400 mb-8">Access all premium tools for free. No credit card required.</p>
+          <button className="btn btn-primary w-full py-4">Create Free Account</button>
+        </div>
+        <div className="card p-10 bg-slate-50 dark:bg-slate-900">
+          <h3 className="text-2xl font-bold mb-4 text-slate-900 dark:text-white">For Teams</h3>
+          <p className="text-slate-600 dark:text-slate-400 mb-8">Collaborative tools, shared assets, and team management.</p>
+          <button className="btn btn-secondary w-full py-4">Contact Sales</button>
+        </div>
+      </div>
     </div>
   );
 }
