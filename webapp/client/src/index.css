@@ -1,60 +1,74 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-primary: #b7131a;
-  --color-primary-container: #db322f;
-  --color-on-primary: #ffffff;
-  --color-on-primary-container: #fffbff;
-  --color-surface: #f8f9fa;
-  --color-on-surface: #191c1d;
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #f3f4f5;
-  --color-surface-container: #edeeef;
-  --color-surface-container-high: #e7e8e9;
-  --color-surface-container-highest: #e1e3e4;
-  --color-secondary: #5f5e5e;
-  --color-on-secondary: #ffffff;
-  --color-secondary-container: #e2dfde;
-  --color-on-secondary-container: #636262;
-  --color-outline: #906f6c;
-  --color-outline-variant: #e4beb9;
-  --color-background: #f8f9fa;
+  --color-primary: #2563eb;
+  --color-primary-foreground: #ffffff;
   
-  --font-inter: 'Inter', sans-serif;
-  --font-brand: 'Outfit', sans-serif;
-  --font-body-md: 'Inter', sans-serif;
-  --font-headline-md: 'Inter', sans-serif;
-  --font-headline-lg: 'Inter', sans-serif;
-  --font-display-lg: 'Inter', sans-serif;
-  --font-label-md: 'Inter', sans-serif;
-  --font-label-sm: 'Inter', sans-serif;
+  --color-accent: #4f46e5;
   
-  --spacing-xs: 4px;
-  --spacing-base: 8px;
-  --spacing-sm: 12px;
-  --spacing-md: 24px;
-  --spacing-lg: 48px;
-  --spacing-xl: 80px;
-  --spacing-gutter: 24px;
-  --spacing-container-max: 1200px;
-}@layer components {
-  .input-control {
-    width: 100%;
-    border-radius: 0.5rem;
-    border: 1px solid rgb(203 213 225);
-    background: white;
-    padding: 0.5rem 0.75rem;
-    color: rgb(15 23 42);
-    font-size: 0.875rem;
-    line-height: 1.25rem;
-    outline: none;
-    transition: border-color 150ms ease, box-shadow 150ms ease;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+
+  --shadow-premium: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+  --shadow-premium-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+@layer base {
+  * {
+    @apply border-slate-200 dark:border-slate-800;
   }
 
-  .input-control:focus {
-    border-color: rgb(15 23 42);
-    box-shadow: 0 0 0 2px rgb(226 232 240);
+  body {
+    @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50 font-sans antialiased selection:bg-primary/20 selection:text-primary;
+    @apply transition-colors duration-300;
   }
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/70 backdrop-blur-md border border-white/20 dark:bg-slate-900/70 dark:border-slate-800/50;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center rounded-xl px-5 py-2.5 text-sm font-semibold transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-95;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary/90 shadow-sm;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-800 dark:hover:bg-slate-800;
+  }
+
+  .btn-ghost {
+    @apply text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800;
+  }
+
+  .input-control {
+    @apply w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-primary;
+  }
+
+  .card {
+    @apply rounded-2xl border border-slate-200 bg-white p-6 shadow-premium transition-all hover:shadow-premium-hover dark:border-slate-800 dark:bg-slate-900;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 rounded-full hover:bg-slate-400 transition-colors dark:bg-slate-700 dark:hover:bg-slate-600;
 }
