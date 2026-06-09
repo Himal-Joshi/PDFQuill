@@ -7,6 +7,18 @@ import autoprefixer from 'autoprefixer'
 export default defineConfig({
   base: '/PDFQuill/',
   plugins: [react()],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+      '/download': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
+  },
   css: {
     postcss: {
       plugins: [tailwindcss, autoprefixer],

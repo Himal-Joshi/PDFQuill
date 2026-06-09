@@ -29,7 +29,7 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3001';
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? '' : 'https://himal-joshi.github.io/PDFQuill');
 
 type Tool = 'merge' | 'split' | 'compress' | 'rotate' | 'watermark' | 'page-numbers' | 'organize' | 'convert';
 
@@ -115,6 +115,7 @@ const tools: ToolConfig[] = [
 ];
 
 function App() {
+  const [view, setView] = useState<'main' | 'pricing' | 'solutions' | 'privacy' | 'terms'>('main');
   const [activeTool, setActiveTool] = useState<Tool | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -165,6 +166,7 @@ function App() {
   };
 
   const goHome = () => {
+    setView('main');
     setActiveTool(null);
   };
 
@@ -255,9 +257,9 @@ function App() {
           </div>
 
           <div className="hidden md:flex items-center gap-8">
-            <button onClick={goHome} className={cn("text-sm font-semibold transition-colors duration-200", activeTool === null ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Tools</button>
-            <a className="text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200" href="#">Pricing</a>
-            <a className="text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors duration-200" href="#">Solutions</a>
+            <button onClick={goHome} className={cn("text-sm font-semibold transition-colors duration-200", (activeTool === null && view === 'main') ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Tools</button>
+            <button onClick={() => setView('pricing')} className={cn("text-sm font-semibold transition-colors duration-200", view === 'pricing' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Pricing</button>
+            <button onClick={() => setView('solutions')} className={cn("text-sm font-semibold transition-colors duration-200", view === 'solutions' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Solutions</button>
           </div>
 
           <div className="flex items-center gap-4">
@@ -275,7 +277,15 @@ function App() {
       </nav>
 
       <main className="pt-20 pb-20 flex-1">
-        {activeTool === null ? (
+        {view !== 'main' ? (
+          <div className="px-6 py-20 max-w-4xl mx-auto">
+            {view === 'pricing' && <PricingView />}
+            {view === 'solutions' && <SolutionsView />}
+            {view === 'privacy' && <PrivacyView />}
+            {view === 'terms' && <TermsView />}
+            <button onClick={goHome} className="mt-12 btn btn-secondary">Back to Home</button>
+          </div>
+        ) : activeTool === null ? (
           // Landing View
           <div className="flex flex-col">
             {/* Hero Section */}
@@ -561,10 +571,10 @@ function App() {
             <p className="text-xs font-medium text-slate-500">© 2026 PDFQuill Toolkit. Built for security & speed.</p>
           </div>
           <div className="flex flex-wrap justify-center gap-x-8 gap-y-4">
-            <a className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest" href="#">Privacy</a>
-            <a className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest" href="#">Terms</a>
-            <a className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest" href="#">Github</a>
-            <a className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest" href="#">Contact</a>
+            <button onClick={() => setView('privacy')} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Privacy</button>
+            <button onClick={() => setView('terms')} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Terms</button>
+            <a className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest" href="https://github.com/Himal-Joshi/PDFQuill" target="_blank" rel="noopener noreferrer">Github</a>
+            <a className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest" href="mailto:hello@pdfquill.com">Contact</a>
           </div>
         </div>
       </footer>
@@ -745,6 +755,84 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       <span className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">{label}</span>
       {children}
     </label>
+  );
+}
+
+function PricingView() {
+  const plans = [
+    { name: 'Basic', price: 'Free', features: ['All PDF tools', 'Unlimited files', '100% Secure', 'Ad-free'] },
+    { name: 'Pro', price: '$9/mo', features: ['Everything in Basic', 'API Access', 'Priority Support', 'Custom Branding'] },
+    { name: 'Enterprise', price: 'Custom', features: ['Everything in Pro', 'SSO & SAML', 'Dedicated Infrastructure', 'SLA Guarantees'] },
+  ];
+
+  return (
+    <div>
+      <h2 className="text-4xl font-display font-extrabold mb-12 text-slate-900 dark:text-white">Simple, transparent pricing.</h2>
+      <div className="grid sm:grid-cols-3 gap-8">
+        {plans.map((plan) => (
+          <div key={plan.name} className="card p-8 flex flex-col">
+            <h3 className="text-xl font-bold mb-2 text-slate-900 dark:text-white">{plan.name}</h3>
+            <div className="text-3xl font-extrabold text-primary mb-6">{plan.price}</div>
+            <ul className="space-y-4 mb-8 flex-1">
+              {plan.features.map((f) => (
+                <li key={f} className="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                  <CheckCircle size={16} className="text-emerald-500" /> {f}
+                </li>
+              ))}
+            </ul>
+            <button className={cn("btn w-full py-3", plan.name === 'Pro' ? "btn-primary" : "btn-secondary")}>Choose {plan.name}</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SolutionsView() {
+  const solutions = [
+    { title: 'For Developers', desc: 'Integrate PDF processing into your apps with our robust and fast API.' },
+    { title: 'For Businesses', desc: 'Automate your document workflows and improve team productivity.' },
+    { title: 'For Education', desc: 'Secure and easy-to-use tools for students and faculty members.' },
+  ];
+
+  return (
+    <div>
+      <h2 className="text-4xl font-display font-extrabold mb-12 text-slate-900 dark:text-white">Solutions for every workflow.</h2>
+      <div className="grid gap-8">
+        {solutions.map((s) => (
+          <div key={s.title} className="card p-8">
+            <h3 className="text-2xl font-bold mb-4 text-slate-900 dark:text-white">{s.title}</h3>
+            <p className="text-lg text-slate-600 dark:text-slate-400">{s.desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PrivacyView() {
+  return (
+    <div className="prose dark:prose-invert max-w-none">
+      <h2 className="text-4xl font-display font-extrabold mb-8 text-slate-900 dark:text-white">Privacy Policy</h2>
+      <p className="text-slate-600 dark:text-slate-400">At PDFQuill, we take your privacy seriously. All file processing is done securely, and files are automatically deleted from our servers after processing.</p>
+      <h3 className="text-2xl font-bold mt-8 mb-4 text-slate-900 dark:text-white">1. Data Collection</h3>
+      <p className="text-slate-600 dark:text-slate-400">We do not store your PDF files or any data extracted from them. Files are processed in a temporary environment and purged immediately.</p>
+      <h3 className="text-2xl font-bold mt-8 mb-4 text-slate-900 dark:text-white">2. Cookies</h3>
+      <p className="text-slate-600 dark:text-slate-400">We use local storage to save your theme preference (light/dark mode). No tracking cookies are used.</p>
+    </div>
+  );
+}
+
+function TermsView() {
+  return (
+    <div className="prose dark:prose-invert max-w-none">
+      <h2 className="text-4xl font-display font-extrabold mb-8 text-slate-900 dark:text-white">Terms of Service</h2>
+      <p className="text-slate-600 dark:text-slate-400">By using PDFQuill, you agree to the following terms:</p>
+      <h3 className="text-2xl font-bold mt-8 mb-4 text-slate-900 dark:text-white">1. Use of Service</h3>
+      <p className="text-slate-600 dark:text-slate-400">PDFQuill is provided "as is" without warranty of any kind. We are not responsible for any data loss or issues arising from the use of our tools.</p>
+      <h3 className="text-2xl font-bold mt-8 mb-4 text-slate-900 dark:text-white">2. Prohibited Uses</h3>
+      <p className="text-slate-600 dark:text-slate-400">You may not use this service for any illegal activities or to process malicious content.</p>
+    </div>
   );
 }
 
