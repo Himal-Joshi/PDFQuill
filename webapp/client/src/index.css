@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@theme {
+  --color-primary: #b7131a;
+  --color-primary-container: #db322f;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #fffbff;
+  --color-surface: #f8f9fa;
+  --color-on-surface: #191c1d;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f3f4f5;
+  --color-surface-container: #edeeef;
+  --color-surface-container-high: #e7e8e9;
+  --color-surface-container-highest: #e1e3e4;
+  --color-secondary: #5f5e5e;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #e2dfde;
+  --color-on-secondary-container: #636262;
+  --color-outline: #906f6c;
+  --color-outline-variant: #e4beb9;
+  --color-background: #f8f9fa;
+  
+  --font-inter: 'Inter', sans-serif;
+  --font-brand: 'Outfit', sans-serif;
+  --font-body-md: 'Inter', sans-serif;
+  --font-headline-md: 'Inter', sans-serif;
+  --font-headline-lg: 'Inter', sans-serif;
+  --font-display-lg: 'Inter', sans-serif;
+  --font-label-md: 'Inter', sans-serif;
+  --font-label-sm: 'Inter', sans-serif;
+  
+  --spacing-xs: 4px;
+  --spacing-base: 8px;
+  --spacing-sm: 12px;
+  --spacing-md: 24px;
+  --spacing-lg: 48px;
+  --spacing-xl: 80px;
+  --spacing-gutter: 24px;
+  --spacing-container-max: 1200px;
+}@layer components {
+  .input-control {
+    width: 100%;
+    border-radius: 0.5rem;
+    border: 1px solid rgb(203 213 225);
+    background: white;
+    padding: 0.5rem 0.75rem;
+    color: rgb(15 23 42);
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    outline: none;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+  }
+
+  .input-control:focus {
+    border-color: rgb(15 23 42);
+    box-shadow: 0 0 0 2px rgb(226 232 240);
+  }
+}

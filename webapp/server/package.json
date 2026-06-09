@@ -1,0 +1,17 @@
+{
+  "name": "pdfquill-web-server",
+  "version": "1.0.0",
+  "description": "Node.js PDF API for the PDFQuill web app",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node --watch index.js",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "archiver": "^8.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "multer": "^1.4.5-lts.1",
+    "pdf-lib": "^1.17.1"
+  }
+}

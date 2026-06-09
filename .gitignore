@@ -1,0 +1,13 @@
+**/node_modules/
+webapp/client/dist/
+webapp/server/uploads/
+webapp/server/outputs/
+.env
+.env.*
+.DS_Store
+*.pdf
+*.docx
+*.xlsx
+*.zip
+*.png
+*.log

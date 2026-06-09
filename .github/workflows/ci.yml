@@ -1,0 +1,27 @@
+name: PDFQuill Web CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install server dependencies
+        run: npm install --prefix webapp/server
+      - name: Check server syntax
+        run: npm run check:server
+      - name: Install client dependencies
+        run: npm install --prefix webapp/client
+      - name: Lint client
+        run: npm run lint
+      - name: Build client
+        run: npm run build

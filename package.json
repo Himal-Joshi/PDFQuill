@@ -1,0 +1,15 @@
+{
+  "name": "pdfquill-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Web-only PDF toolkit with a React client and Node API.",
+  "scripts": {
+    "install:all": "npm install --prefix webapp/server && npm install --prefix webapp/client",
+    "dev:server": "npm --prefix webapp/server run dev",
+    "dev:client": "npm --prefix webapp/client run dev --",
+    "start": "npm --prefix webapp/server start",
+    "build": "npm --prefix webapp/client run build",
+    "lint": "npm --prefix webapp/client run lint",
+    "check:server": "node --check webapp/server/index.js"
+  }
+}
