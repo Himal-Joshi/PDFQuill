@@ -29,7 +29,7 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? '/PDFQuill' : 'https://himal-joshi.github.io/PDFQuill');
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? '/PDFQuill' : '');
 
 type Tool = 'merge' | 'split' | 'compress' | 'rotate' | 'watermark' | 'page-numbers' | 'organize' | 'convert';
 
@@ -224,6 +224,15 @@ function App() {
       const response = await axios.post<{ downloadUrl: string }>(
         `${API_BASE}${selectedTool.endpoint}`,
         formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          onUploadProgress: (progressEvent) => {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
+            console.log(`Upload progress: ${percentCompleted}%`);
+          }
+        }
       );
       setDownloadUrl(`${API_BASE}${response.data.downloadUrl}`);
     } catch (requestError: unknown) {
@@ -571,7 +580,7 @@ function App() {
                 <span className="dark:text-white">PDF</span><span className="text-primary">Quill</span>
               </span>
             </div>
-            <p className="text-xs font-medium text-slate-500">© 2026 PDFQuill Toolkit. Built for security & speed.</p>
+            <p className="text-xs font-medium text-slate-500">© {new Date().getFullYear()} PDFQuill Toolkit. Built for security & speed.</p>
           </div>
           <div className="flex flex-wrap justify-center gap-x-8 gap-y-4">
             <button onClick={() => setView('privacy')} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Privacy</button>

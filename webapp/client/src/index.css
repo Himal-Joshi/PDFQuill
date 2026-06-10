@@ -7,8 +7,8 @@
   
   --color-accent: #4f46e5;
   
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", "Proxima Nova", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-display: "Plus Jakarta Sans", "Proxima Nova", ui-sans-serif, system-ui, sans-serif;
 
   --radius-lg: 0.5rem;
   --radius-xl: 0.75rem;
