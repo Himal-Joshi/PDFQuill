@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, type ChangeEvent, type ReactNode } from 'react';
-import axios from 'axios';
+// axios removed
 import {
   AlertCircle,
   CheckCircle,
@@ -24,12 +24,13 @@ import {
 import { AnimatePresence, motion } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { mergePdfs, splitPdf, compressPdf, rotatePdf, watermarkPdf, addPageNumbers, organizePdf, imagesToPdf } from './lib/pdfProcessing';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? '/PDFQuill' : '/PDFQuill');
+// const API_BASE = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? '/PDFQuill' : '/PDFQuill');
 
 type Tool = 'merge' | 'split' | 'compress' | 'rotate' | 'watermark' | 'page-numbers' | 'organize' | 'convert';
 
@@ -117,6 +118,18 @@ const tools: ToolConfig[] = [
 function App() {
   const [view, setView] = useState<'main' | 'pricing' | 'solutions' | 'privacy' | 'terms' | 'login' | 'docs' | 'get-started'>('main');
   const [activeTool, setActiveTool] = useState<Tool | null>(null);
+  const [user, setUser] = useState<{ email: string; token: string } | null>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('user');
+      if (saved) return JSON.parse(saved);
+    }
+    return null;
+  });
+
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem('user');
+  };
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('theme');
@@ -190,55 +203,32 @@ function App() {
       return;
     }
 
-    const formData = new FormData();
     setLoading(true);
     setError('');
     setDownloadUrl('');
 
     try {
-      if (activeTool === 'merge' || activeTool === 'convert') {
-        files.forEach((file) => formData.append('files', file));
-      } else {
-        formData.append('file', files[0]);
+      let resultUrl = '';
+      if (activeTool === 'merge') {
+        resultUrl = await mergePdfs(files);
+      } else if (activeTool === 'split') {
+        resultUrl = await splitPdf(files[0], splitMode, pageRange);
+      } else if (activeTool === 'compress') {
+        resultUrl = await compressPdf(files[0]);
+      } else if (activeTool === 'rotate') {
+        resultUrl = await rotatePdf(files[0], rotation);
+      } else if (activeTool === 'watermark') {
+        resultUrl = await watermarkPdf(files[0], watermarkMode, watermarkText, watermarkImage);
+      } else if (activeTool === 'page-numbers') {
+        resultUrl = await addPageNumbers(files[0]);
+      } else if (activeTool === 'organize') {
+        resultUrl = await organizePdf(files[0], organizeAction, pageRange);
+      } else if (activeTool === 'convert') {
+        resultUrl = await imagesToPdf(files);
       }
-
-      if (activeTool === 'split') {
-        formData.append('mode', splitMode);
-        if (splitMode === 'range') formData.append('pages', pageRange);
-      }
-      if (activeTool === 'rotate') {
-        formData.append('rotation', String(rotation));
-      }
-      if (activeTool === 'watermark') {
-        if (watermarkMode === 'image' && watermarkImage) formData.append('image', watermarkImage);
-        else formData.append('text', watermarkText);
-      }
-      if (activeTool === 'organize') {
-        formData.append('action', organizeAction);
-        formData.append('pages', pageRange);
-      }
-      if (activeTool === 'convert') {
-        formData.append('to', 'pdf');
-      }
-
-      const response = await axios.post<{ downloadUrl: string }>(
-        `${API_BASE}${selectedTool.endpoint}`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-          onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
-            console.log(`Upload progress: ${percentCompleted}%`);
-          }
-        }
-      );
-      setDownloadUrl(`${API_BASE}${response.data.downloadUrl}`);
+      setDownloadUrl(resultUrl);
     } catch (requestError: unknown) {
-      if (axios.isAxiosError(requestError)) {
-        setError(requestError.response?.data?.error || requestError.message);
-      } else if (requestError instanceof Error) {
+      if (requestError instanceof Error) {
         setError(requestError.message);
       } else {
         setError('Operation failed.');
@@ -279,8 +269,17 @@ function App() {
             >
               {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
             </button>
-            <button onClick={() => setView('login')} className="hidden sm:block btn btn-ghost">Login</button>
-            <button onClick={() => setView('get-started')} className="btn btn-primary">Get Started</button>
+            {user ? (
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-semibold text-slate-600 dark:text-slate-400 hidden sm:block">{user.email}</span>
+                <button onClick={logout} className="btn btn-ghost">Logout</button>
+              </div>
+            ) : (
+              <>
+                <button onClick={() => setView('login')} className="hidden sm:block btn btn-ghost">Login</button>
+                <button onClick={() => setView('get-started')} className="btn btn-primary">Get Started</button>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -292,7 +291,7 @@ function App() {
             {view === 'solutions' && <SolutionsView />}
             {view === 'privacy' && <PrivacyView />}
             {view === 'terms' && <TermsView />}
-            {view === 'login' && <LoginView />}
+            {view === 'login' && <LoginView onLogin={(u) => { setUser(u); setView('main'); localStorage.setItem('user', JSON.stringify(u)); }} />}
             {view === 'docs' && <DocsView />}
             {view === 'get-started' && <GetStartedView />}
             <button onClick={goHome} className="mt-12 btn btn-secondary">Back to Home</button>
@@ -848,16 +847,127 @@ function TermsView() {
   );
 }
 
-function LoginView() {
+function LoginView({ onLogin }: { onLogin: (user: { email: string; token: string }) => void }) {
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) {
+      setError('Please enter your email and password.');
+      return;
+    }
+    setError('');
+    setIsLoading(true);
+
+    // Mock network request
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      setIsLoading(false);
+      return;
+    }
+
+    // Generate mock JWT token
+    const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+    const payload = btoa(JSON.stringify({ sub: email, iat: Date.now() }));
+    const signature = btoa('mock-signature-do-not-use-in-prod');
+    const token = `${header}.${payload}.${signature}`;
+
+    onLogin({ email, token });
+    setIsLoading(false);
+  };
+
   return (
-    <div className="max-w-md mx-auto card p-10 text-center">
-      <h2 className="text-3xl font-display font-extrabold mb-6 text-slate-900 dark:text-white">Welcome Back</h2>
-      <p className="text-slate-600 dark:text-slate-400 mb-8">Access your personalized PDF toolkit and saved configurations.</p>
-      <div className="space-y-4">
-        <button className="btn btn-primary w-full py-4 font-bold">Continue with Google</button>
-        <button className="btn btn-secondary w-full py-4 font-bold">Continue with GitHub</button>
+    <div className="max-w-md mx-auto">
+      <div className="card p-10 backdrop-blur-xl bg-white/60 dark:bg-slate-900/60 border border-white/20 dark:border-slate-800/50 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-bl-[100px] -mr-16 -mt-16 blur-2xl"></div>
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-500/10 rounded-tr-[100px] -ml-12 -mb-12 blur-xl"></div>
+        
+        <div className="relative z-10">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight">
+              {isRegistering ? 'Create Account' : 'Welcome Back'}
+            </h2>
+            <p className="text-slate-600 dark:text-slate-400 mt-2">
+              {isRegistering 
+                ? 'Join thousands of users using PDFQuill'
+                : 'Sign in to sync your preferences and history'}
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="input-control w-full bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm"
+                placeholder="you@example.com"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input-control w-full bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm"
+                placeholder="••••••••"
+                required
+              />
+            </div>
+
+            <AnimatePresence>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium rounded-xl border border-red-100 dark:border-red-900/30 flex items-center gap-2"
+                >
+                  <AlertCircle size={16} />
+                  {error}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className={cn(
+                "btn btn-primary w-full py-4 text-base shadow-xl shadow-primary/20",
+                isLoading && "opacity-80 cursor-wait"
+              )}
+            >
+              {isLoading ? (
+                <Loader2 className="animate-spin mx-auto" size={20} />
+              ) : (
+                isRegistering ? 'Sign Up' : 'Sign In'
+              )}
+            </button>
+          </form>
+
+          <div className="mt-8 text-center border-t border-slate-100 dark:border-slate-800/50 pt-6">
+            <p className="text-sm text-slate-600 dark:text-slate-400 font-medium">
+              {isRegistering ? "Already have an account?" : "Don't have an account?"}
+              <button
+                type="button"
+                onClick={() => { setIsRegistering(!isRegistering); setError(''); }}
+                className="ml-2 text-primary hover:text-primary/80 font-bold transition-colors"
+              >
+                {isRegistering ? 'Sign In' : 'Sign Up'}
+              </button>
+            </p>
+          </div>
+        </div>
       </div>
-      <p className="mt-8 text-sm text-slate-500">Don't have an account? <span className="text-primary font-bold cursor-pointer">Sign up</span></p>
     </div>
   );
 }

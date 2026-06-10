@@ -11,3 +11,4 @@ webapp/server/outputs/
 *.zip
 *.png
 *.log
+graphify-out/
