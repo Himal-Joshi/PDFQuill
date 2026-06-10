@@ -115,7 +115,9 @@ async function cleanupUploads(files) {
 }
 
 function sendError(res, error) {
-  res.status(500).json({ error: error.message || 'Operation failed.' });
+  console.error('API Error:', error);
+  const status = error.name === 'Error' && error.message.includes('PDF') ? 400 : 500;
+  res.status(status).json({ error: error.message || 'Operation failed.' });
 }
 
 app.get('/api/health', (_req, res) => {
@@ -392,6 +394,17 @@ app.get('/download/*', async (req, res) => {
 
 app.use((_req, res) => {
   res.status(404).json({ error: 'Route not found.' });
+});
+
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'File too large (max 50MB).' });
+    }
+    return res.status(400).json({ error: err.message });
+  }
+  res.status(err.status || 500).json({ error: err.message || 'Internal server error.' });
 });
 
 app.listen(port, () => {
