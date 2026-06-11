@@ -88,13 +88,17 @@ export async function compressPdf(file: File, onProgress?: (p: number) => void):
   return URL.createObjectURL(blob);
 }
 
-export async function rotatePdf(file: File, rotation: number, onProgress?: (p: number) => void): Promise<string> {
+export async function rotatePdf(file: File, rotation: number, mode: 'all' | 'specific', pageRange: string, onProgress?: (p: number) => void): Promise<string> {
   const bytes = await file.arrayBuffer();
   const source = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  const totalPages = source.getPageCount();
+  const pagesToRotate = new Set(mode === 'specific' ? parsePageList(pageRange, totalPages) : Array.from({ length: totalPages }, (_, i) => i));
 
-  source.getPages().forEach((page) => {
-    const current = page.getRotation().angle;
-    page.setRotation(degrees((current + rotation) % 360));
+  source.getPages().forEach((page, index) => {
+    if (pagesToRotate.has(index)) {
+      const current = page.getRotation().angle;
+      page.setRotation(degrees((current + rotation) % 360));
+    }
   });
 
   const rotatedBytes = await source.save({ useObjectStreams: true });

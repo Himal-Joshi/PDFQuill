@@ -36,7 +36,7 @@ function cn(...inputs: ClassValue[]) {
 
 // const API_BASE = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? '/PDFQuill' : '/PDFQuill');
 
-type Tool = 'merge' | 'split' | 'compress' | 'rotate' | 'watermark' | 'page-numbers' | 'organize' | 'convert';
+type Tool = 'merge' | 'split' | 'compress' | 'rotate' | 'watermark' | 'page-numbers' | 'organize' | 'convert' | 'word-to-pdf' | 'ppt-to-pdf';
 
 type ToolConfig = {
   id: Tool;
@@ -50,6 +50,14 @@ type ToolConfig = {
 };
 
 const tools: ToolConfig[] = [
+  {
+    id: 'compress',
+    label: 'Compress PDF',
+    description: 'Reduce file size while optimizing for maximal PDF quality.',
+    endpoint: '/api/compress',
+    icon: 'compress',
+    lucideIcon: Minimize2,
+  },
   {
     id: 'merge',
     label: 'Merge PDF',
@@ -66,14 +74,6 @@ const tools: ToolConfig[] = [
     endpoint: '/api/split',
     icon: 'call_split',
     lucideIcon: Scissors,
-  },
-  {
-    id: 'compress',
-    label: 'Compress PDF',
-    description: 'Reduce file size while optimizing for maximal PDF quality.',
-    endpoint: '/api/compress',
-    icon: 'compress',
-    lucideIcon: Minimize2,
   },
   {
     id: 'convert',
@@ -116,6 +116,22 @@ const tools: ToolConfig[] = [
     endpoint: '/api/organize',
     icon: 'view_list',
     lucideIcon: Layers,
+  },
+  {
+    id: 'word-to-pdf',
+    label: 'Word to PDF',
+    description: 'Convert Microsoft Word (.docx) files to PDF.',
+    endpoint: '/api/word-to-pdf',
+    icon: 'description',
+    lucideIcon: FileText,
+  },
+  {
+    id: 'ppt-to-pdf',
+    label: 'PPT to PDF',
+    description: 'Convert PowerPoint presentations to PDF.',
+    endpoint: '/api/ppt-to-pdf',
+    icon: 'slideshow',
+    lucideIcon: FileImage,
   },
 ];
 
@@ -184,6 +200,8 @@ function App() {
   const [splitMode, setSplitMode] = useState<'all' | 'range'>('all');
   const [pageRange, setPageRange] = useState('');
   const [rotation, setRotation] = useState(90);
+  const [rotationMode, setRotationMode] = useState<'all' | 'specific'>('all');
+  const [rotationPages, setRotationPages] = useState('');
   const [watermarkMode, setWatermarkMode] = useState<'text' | 'image'>('text');
   const [watermarkText, setWatermarkText] = useState('DRAFT');
   const [watermarkImage, setWatermarkImage] = useState<File | null>(null);
@@ -284,7 +302,7 @@ function App() {
       } else if (activeTool === 'compress') {
         resultUrl = await compressPdf(files[0]);
       } else if (activeTool === 'rotate') {
-        resultUrl = await rotatePdf(files[0], rotation);
+        resultUrl = await rotatePdf(files[0], rotation, rotationMode, rotationPages);
       } else if (activeTool === 'watermark') {
         resultUrl = await watermarkPdf(files[0], watermarkMode, watermarkText, watermarkImage);
       } else if (activeTool === 'page-numbers') {
@@ -293,6 +311,8 @@ function App() {
         resultUrl = await organizePdf(files[0], organizeAction, pageRange);
       } else if (activeTool === 'convert') {
         resultUrl = await imagesToPdf(files);
+      } else if (activeTool === 'word-to-pdf' || activeTool === 'ppt-to-pdf') {
+        throw new Error('This feature requires a premium backend API to convert office documents. It is mocked in this open-source demo.');
       }
       setDownloadUrl(resultUrl);
     } catch (requestError: unknown) {
@@ -306,8 +326,8 @@ function App() {
     }
   };
 
-  const needsPageRange = activeTool === 'organize' || (activeTool === 'split' && splitMode === 'range');
-  const canProcess = files.length > 0 && !loading && (!needsPageRange || pageRange.trim().length > 0);
+  const needsPageRange = activeTool === 'organize' || (activeTool === 'split' && splitMode === 'range') || (activeTool === 'rotate' && rotationMode === 'specific');
+  const canProcess = files.length > 0 && !loading && (!needsPageRange || pageRange.trim().length > 0 || rotationPages.trim().length > 0);
 
   return (
     <div className="min-h-screen selection:bg-primary/20 selection:text-primary">
@@ -355,7 +375,7 @@ function App() {
       <main className="pt-20 pb-20 flex-1">
         {view !== 'main' ? (
           <div className="px-6 py-20 max-w-4xl mx-auto">
-            {view === 'pricing' && <PricingView />}
+            {view === 'pricing' && <PricingView user={user} />}
             {view === 'solutions' && <SolutionsView />}
             {view === 'privacy' && <PrivacyView />}
             {view === 'terms' && <TermsView />}
@@ -439,7 +459,7 @@ function App() {
         ) : (
           // Workspace View
           <div className="px-6 py-12">
-            <div className="mx-auto max-w-4xl">
+            <div className="mx-auto max-w-7xl">
               <motion.button
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -463,7 +483,8 @@ function App() {
                 </div>
               </motion.header>
 
-              <section className="grid gap-8">
+              <div className="flex flex-col lg:flex-row gap-8 items-start">
+                <section className="flex-1 w-full grid gap-8">
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -475,7 +496,12 @@ function App() {
                     type="file"
                     className="hidden"
                     multiple={selectedTool.multiple}
-                    accept={selectedTool.acceptsImages ? '.png,.jpg,.jpeg' : '.pdf'}
+                    accept={
+                      selectedTool.acceptsImages ? '.png,.jpg,.jpeg' 
+                      : activeTool === 'word-to-pdf' ? '.docx,.doc'
+                      : activeTool === 'ppt-to-pdf' ? '.pptx,.ppt'
+                      : '.pdf'
+                    }
                     onChange={handleFileChange}
                   />
                   <label
@@ -494,7 +520,7 @@ function App() {
                       <Upload size={32} />
                     </div>
                     <span className="text-xl font-bold text-slate-900 dark:text-white mb-2">
-                      {files.length > 0 ? `${files.length} files selected` : `Drop your ${selectedTool.acceptsImages ? 'images' : 'PDFs'} here`}
+                      {files.length > 0 ? `${files.length} files selected` : `Drop your ${selectedTool.acceptsImages ? 'images' : activeTool === 'word-to-pdf' ? 'Word documents' : activeTool === 'ppt-to-pdf' ? 'PowerPoint files' : 'PDFs'} here`}
                     </span>
                     <p className="text-slate-500 dark:text-slate-400 max-w-xs">
                       {selectedTool.multiple ? 'Click to browse or drag and drop multiple files' : 'Select a single file to begin processing'}
@@ -634,13 +660,15 @@ function App() {
                     )}
                   </motion.div>
                 )}
+                </section>
 
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="card p-8"
-                >
+                <aside className="w-full lg:w-[380px] shrink-0 grid gap-8 lg:sticky lg:top-28">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="card p-8"
+                  >
                   <ToolOptions
                     activeTool={activeTool}
                     splitMode={splitMode}
@@ -649,6 +677,10 @@ function App() {
                     setPageRange={setPageRange}
                     rotation={rotation}
                     setRotation={setRotation}
+                    rotationMode={rotationMode}
+                    setRotationMode={setRotationMode}
+                    rotationPages={rotationPages}
+                    setRotationPages={setRotationPages}
                     watermarkMode={watermarkMode}
                     setWatermarkMode={setWatermarkMode}
                     watermarkText={watermarkText}
@@ -714,7 +746,8 @@ function App() {
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </section>
+                </aside>
+              </div>
             </div>
           </div>
         )}
@@ -754,6 +787,10 @@ type ToolOptionsProps = {
   setPageRange: (value: string) => void;
   rotation: number;
   setRotation: (value: number) => void;
+  rotationMode: 'all' | 'specific';
+  setRotationMode: (value: 'all' | 'specific') => void;
+  rotationPages: string;
+  setRotationPages: (value: string) => void;
   watermarkMode: 'text' | 'image';
   setWatermarkMode: (value: 'text' | 'image') => void;
   watermarkText: string;
@@ -771,6 +808,10 @@ function ToolOptions({
   setPageRange,
   rotation,
   setRotation,
+  rotationMode,
+  setRotationMode,
+  rotationPages,
+  setRotationPages,
   watermarkMode,
   setWatermarkMode,
   watermarkText,
@@ -808,25 +849,47 @@ function ToolOptions({
 
   if (activeTool === 'rotate') {
     return (
-      <Field label="Rotation Angle">
-        <div className="grid grid-cols-3 gap-4">
-          {[90, 180, 270].map((angle) => (
-            <button
-              key={angle}
-              type="button"
-              onClick={() => setRotation(angle)}
-              className={cn(
-                'rounded-xl border-2 py-4 text-sm font-bold transition-all duration-200',
-                rotation === angle
-                  ? 'border-primary bg-primary/5 text-primary shadow-inner'
-                  : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-primary/30'
-              )}
-            >
-              {angle}°
-            </button>
-          ))}
-        </div>
-      </Field>
+      <div className="grid gap-6">
+        <Field label="Rotation Mode">
+          <select
+            value={rotationMode}
+            onChange={(event) => setRotationMode(event.target.value as 'all' | 'specific')}
+            className="input-control"
+          >
+            <option value="all">Every page</option>
+            <option value="specific">Specific pages</option>
+          </select>
+        </Field>
+        {rotationMode === 'specific' && (
+          <Field label="Pages to Rotate">
+            <input
+              value={rotationPages}
+              onChange={(event) => setRotationPages(event.target.value)}
+              className="input-control"
+              placeholder="e.g. 1-3, 5, 8-10"
+            />
+          </Field>
+        )}
+        <Field label="Rotation Angle">
+          <div className="grid grid-cols-3 gap-4">
+            {[90, 180, 270].map((angle) => (
+              <button
+                key={angle}
+                type="button"
+                onClick={() => setRotation(angle)}
+                className={cn(
+                  'rounded-xl border-2 py-4 text-sm font-bold transition-all duration-200',
+                  rotation === angle
+                    ? 'border-primary bg-primary/5 text-primary shadow-inner'
+                    : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-primary/30'
+                )}
+              >
+                {angle}°
+              </button>
+            ))}
+          </div>
+        </Field>
+      </div>
     );
   }
 
@@ -908,6 +971,14 @@ function ToolOptions({
     return <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Our advanced compression algorithm will optimize your PDF for the web while maintaining high visual quality.</p>;
   }
 
+  if (activeTool === 'word-to-pdf' || activeTool === 'ppt-to-pdf') {
+    return (
+      <p className="text-sm font-medium text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-100 dark:border-amber-900/30">
+        <strong>Demo Limitation:</strong> Converting Office documents to PDF requires a backend processing server (e.g., CloudConvert API). Since this demo is 100% client-side, clicking process will simulate the action.
+      </p>
+    );
+  }
+
   if (activeTool === null) return null;
 
   return <p className="text-sm font-medium text-slate-500 dark:text-slate-400">No additional configuration required for this operation.</p>;
@@ -922,7 +993,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function PricingView() {
+function PricingView({ user }: { user: { email: string; token: string } | null }) {
   const plans = [
     { name: 'Basic', price: 'Free', features: ['All PDF tools', 'Unlimited files', '100% Secure', 'Ad-free'] },
     { name: 'Pro', price: '$9/mo', features: ['Everything in Basic', 'API Access', 'Priority Support', 'Custom Branding'] },
@@ -931,7 +1002,12 @@ function PricingView() {
 
   return (
     <div>
-      <h2 className="text-4xl font-display font-extrabold mb-12 text-slate-900 dark:text-white">Simple, transparent pricing.</h2>
+      <div className="text-center mb-12">
+        <h2 className="text-4xl font-display font-extrabold text-slate-900 dark:text-white mb-4">Simple, transparent pricing.</h2>
+        <div className="inline-block bg-primary/10 text-primary px-4 py-2 rounded-full font-bold text-sm">
+          Note: The Beta version is completely free!
+        </div>
+      </div>
       <div className="grid sm:grid-cols-3 gap-8">
         {plans.map((plan) => (
           <div key={plan.name} className="card p-8 flex flex-col">
@@ -944,7 +1020,18 @@ function PricingView() {
                 </li>
               ))}
             </ul>
-            <button className={cn("btn w-full py-3", plan.name === 'Pro' ? "btn-primary" : "btn-secondary")}>Choose {plan.name}</button>
+            <button
+              onClick={() => {
+                if (!user) {
+                  window.location.assign('#login');
+                } else if (plan.price !== 'Free') {
+                  alert('Payments are disabled in the Beta version. Enjoy PDFQuill for free!');
+                }
+              }}
+              className={cn("btn w-full py-3", plan.name === 'Pro' ? "btn-primary" : "btn-secondary")}
+            >
+              {user ? `Purchase ${plan.name}` : 'Login to Purchase'}
+            </button>
           </div>
         ))}
       </div>
