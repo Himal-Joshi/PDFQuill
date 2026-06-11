@@ -28,7 +28,8 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { mergePdfs, splitPdf, compressPdf, rotatePdf, watermarkPdf, addPageNumbers, organizePdf, imagesToPdf } from './lib/pdfProcessing';
 import { auth } from './lib/firebase';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
+import { FirebaseError } from 'firebase/app';
 import { validateEmailDomain, validatePassword } from './lib/auth';
 import { generateThumbnails, type PageThumbnail } from './lib/pdfThumbnails';
 
@@ -1148,13 +1149,19 @@ function LoginView({ onLogin }: { onLogin: (user: { email: string; token: string
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         onLogin({ email: userCredential.user.email!, token: await userCredential.user.getIdToken() });
       }
-    } catch (err: any) {
-      if (err.code === 'auth/email-already-in-use') {
-        setError('Email already in use. Please sign in instead.');
-      } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-        setError('Invalid email or password.');
-      } else {
+    } catch (err: unknown) {
+      if (err instanceof FirebaseError) {
+        if (err.code === 'auth/email-already-in-use') {
+          setError('Email already in use. Please sign in instead.');
+        } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+          setError('Invalid email or password.');
+        } else {
+          setError(err.message || 'An unexpected error occurred. Please try again.');
+        }
+      } else if (err instanceof Error) {
         setError(err.message || 'An unexpected error occurred. Please try again.');
+      } else {
+        setError('An unexpected error occurred. Please try again.');
       }
     } finally {
       setIsLoading(false);
