@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback, type ChangeEvent, type ReactNode } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef, type ChangeEvent, type ReactNode } from 'react';
 // axios removed
 import {
   AlertCircle,
@@ -27,7 +27,9 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { mergePdfs, splitPdf, compressPdf, rotatePdf, watermarkPdf, addPageNumbers, organizePdf, imagesToPdf } from './lib/pdfProcessing';
-import { validateEmailDomain, validatePassword, registerAccount, loginAccount } from './lib/auth';
+import { auth } from './lib/firebase';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
+import { validateEmailDomain, validatePassword } from './lib/auth';
 import { generateThumbnails, type PageThumbnail } from './lib/pdfThumbnails';
 
 function cn(...inputs: ClassValue[]) {
@@ -36,7 +38,7 @@ function cn(...inputs: ClassValue[]) {
 
 // const API_BASE = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? '/PDFQuill' : '/PDFQuill');
 
-type Tool = 'merge' | 'split' | 'compress' | 'rotate' | 'watermark' | 'page-numbers' | 'organize' | 'convert' | 'word-to-pdf' | 'ppt-to-pdf';
+type Tool = 'merge' | 'split' | 'compress' | 'rotate' | 'watermark' | 'page-numbers' | 'organize' | 'convert';
 
 type ToolConfig = {
   id: Tool;
@@ -117,22 +119,6 @@ const tools: ToolConfig[] = [
     icon: 'view_list',
     lucideIcon: Layers,
   },
-  {
-    id: 'word-to-pdf',
-    label: 'Word to PDF',
-    description: 'Convert Microsoft Word (.docx) files to PDF.',
-    endpoint: '/api/word-to-pdf',
-    icon: 'description',
-    lucideIcon: FileText,
-  },
-  {
-    id: 'ppt-to-pdf',
-    label: 'PPT to PDF',
-    description: 'Convert PowerPoint presentations to PDF.',
-    endpoint: '/api/ppt-to-pdf',
-    icon: 'slideshow',
-    lucideIcon: FileImage,
-  },
 ];
 
 type ViewType = 'main' | 'pricing' | 'solutions' | 'privacy' | 'terms' | 'login' | 'docs' | 'get-started';
@@ -158,17 +144,24 @@ function App() {
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
-  const [user, setUser] = useState<{ email: string; token: string } | null>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('user');
-      if (saved) return JSON.parse(saved);
-    }
-    return null;
-  });
+  const [user, setUser] = useState<{ email: string; token: string } | null>(null);
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        setUser({ 
+          email: firebaseUser.email || '', 
+          token: await firebaseUser.getIdToken() 
+        });
+      } else {
+        setUser(null);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const logout = async () => {
+    await signOut(auth);
   };
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -210,6 +203,36 @@ function App() {
   // Thumbnail state
   const [thumbnails, setThumbnails] = useState<PageThumbnail[]>([]);
   const [loadingThumbnails, setLoadingThumbnails] = useState(false);
+
+  // Drag and drop state for thumbnails
+  const dragItem = useRef<number | null>(null);
+  const dragOverItem = useRef<number | null>(null);
+
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    dragItem.current = index;
+    e.currentTarget.classList.add('opacity-50', 'scale-95');
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    dragOverItem.current = index;
+  };
+
+  const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
+    e.currentTarget.classList.remove('opacity-50', 'scale-95');
+    if (dragItem.current !== null && dragOverItem.current !== null && dragItem.current !== dragOverItem.current) {
+      const copyThumbnails = [...thumbnails];
+      const dragItemContent = copyThumbnails[dragItem.current];
+      copyThumbnails.splice(dragItem.current, 1);
+      copyThumbnails.splice(dragOverItem.current, 0, dragItemContent);
+      dragItem.current = null;
+      dragOverItem.current = null;
+      setThumbnails(copyThumbnails);
+      
+      if (activeTool === 'organize' && organizeAction === 'reorder') {
+        setPageRange(copyThumbnails.map(t => t.pageNumber).join(','));
+      }
+    }
+  };
 
   const selectedTool = useMemo(
     () => tools.find((tool) => tool.id === activeTool) ?? tools[0],
@@ -311,8 +334,6 @@ function App() {
         resultUrl = await organizePdf(files[0], organizeAction, pageRange);
       } else if (activeTool === 'convert') {
         resultUrl = await imagesToPdf(files);
-      } else if (activeTool === 'word-to-pdf' || activeTool === 'ppt-to-pdf') {
-        throw new Error('This feature requires a premium backend API to convert office documents. It is mocked in this open-source demo.');
       }
       setDownloadUrl(resultUrl);
     } catch (requestError: unknown) {
@@ -496,12 +517,7 @@ function App() {
                     type="file"
                     className="hidden"
                     multiple={selectedTool.multiple}
-                    accept={
-                      selectedTool.acceptsImages ? '.png,.jpg,.jpeg' 
-                      : activeTool === 'word-to-pdf' ? '.docx,.doc'
-                      : activeTool === 'ppt-to-pdf' ? '.pptx,.ppt'
-                      : '.pdf'
-                    }
+                    accept={selectedTool.acceptsImages ? '.png,.jpg,.jpeg' : '.pdf'}
                     onChange={handleFileChange}
                   />
                   <label
@@ -520,7 +536,7 @@ function App() {
                       <Upload size={32} />
                     </div>
                     <span className="text-xl font-bold text-slate-900 dark:text-white mb-2">
-                      {files.length > 0 ? `${files.length} files selected` : `Drop your ${selectedTool.acceptsImages ? 'images' : activeTool === 'word-to-pdf' ? 'Word documents' : activeTool === 'ppt-to-pdf' ? 'PowerPoint files' : 'PDFs'} here`}
+                      {files.length > 0 ? `${files.length} files selected` : `Drop your ${selectedTool.acceptsImages ? 'images' : 'PDFs'} here`}
                     </span>
                     <p className="text-slate-500 dark:text-slate-400 max-w-xs">
                       {selectedTool.multiple ? 'Click to browse or drag and drop multiple files' : 'Select a single file to begin processing'}
@@ -636,10 +652,18 @@ function App() {
                       </div>
                     ) : thumbnails.length > 0 ? (
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                        {thumbnails.map((thumb) => (
+                        {thumbnails.map((thumb, index) => (
                           <div
                             key={thumb.pageNumber}
-                            className="group/thumb flex flex-col items-center gap-2"
+                            draggable={activeTool === 'organize' && organizeAction === 'reorder'}
+                            onDragStart={(e) => handleDragStart(e, index)}
+                            onDragEnter={(e) => handleDragEnter(e, index)}
+                            onDragEnd={handleDragEnd}
+                            onDragOver={(e) => e.preventDefault()}
+                            className={cn(
+                              "group/thumb flex flex-col items-center gap-2 transition-all duration-200",
+                              activeTool === 'organize' && organizeAction === 'reorder' && "cursor-grab active:cursor-grabbing"
+                            )}
                           >
                             <div className="relative rounded-xl border-2 border-slate-100 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900 shadow-sm hover:border-primary/40 hover:shadow-md transition-all duration-200">
                               <img
@@ -771,7 +795,7 @@ function App() {
             <button onClick={() => window.location.assign('#privacy')} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Privacy</button>
             <button onClick={() => window.location.assign('#terms')} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Terms</button>
             <a className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest" href="https://github.com/Himal-Joshi/PDFQuill" target="_blank" rel="noopener noreferrer">Github</a>
-            <a className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest" href="mailto:hello@pdfquill.com">Contact</a>
+            <a className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest" href="https://github.com/Himal-Joshi/PDFQuill" target="_blank" rel="noopener noreferrer">Contact</a>
           </div>
         </div>
       </footer>
@@ -971,14 +995,6 @@ function ToolOptions({
     return <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Our advanced compression algorithm will optimize your PDF for the web while maintaining high visual quality.</p>;
   }
 
-  if (activeTool === 'word-to-pdf' || activeTool === 'ppt-to-pdf') {
-    return (
-      <p className="text-sm font-medium text-amber-600 dark:text-amber-500 bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-100 dark:border-amber-900/30">
-        <strong>Demo Limitation:</strong> Converting Office documents to PDF requires a backend processing server (e.g., CloudConvert API). Since this demo is 100% client-side, clicking process will simulate the action.
-      </p>
-    );
-  }
-
   if (activeTool === null) return null;
 
   return <p className="text-sm font-medium text-slate-500 dark:text-slate-400">No additional configuration required for this operation.</p>;
@@ -1126,24 +1142,20 @@ function LoginView({ onLogin }: { onLogin: (user: { email: string; token: string
       await new Promise((resolve) => setTimeout(resolve, 400));
 
       if (isRegistering) {
-        const result = await registerAccount(email, password);
-        if (!result.success) {
-          setError(result.error ?? 'Registration failed.');
-          setIsLoading(false);
-          return;
-        }
-        onLogin({ email: result.email!, token: result.token! });
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        onLogin({ email: userCredential.user.email!, token: await userCredential.user.getIdToken() });
       } else {
-        const result = await loginAccount(email, password);
-        if (!result.success) {
-          setError(result.error ?? 'Login failed.');
-          setIsLoading(false);
-          return;
-        }
-        onLogin({ email: result.email!, token: result.token! });
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        onLogin({ email: userCredential.user.email!, token: await userCredential.user.getIdToken() });
       }
-    } catch {
-      setError('An unexpected error occurred. Please try again.');
+    } catch (err: any) {
+      if (err.code === 'auth/email-already-in-use') {
+        setError('Email already in use. Please sign in instead.');
+      } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+        setError('Invalid email or password.');
+      } else {
+        setError(err.message || 'An unexpected error occurred. Please try again.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -1417,12 +1429,12 @@ function GetStartedView() {
         <div className="card p-10 bg-primary/5 border-primary/20">
           <h3 className="text-2xl font-bold mb-4 text-slate-900 dark:text-white">For Individuals</h3>
           <p className="text-slate-600 dark:text-slate-400 mb-8">Access all premium tools for free. No credit card required.</p>
-          <button className="btn btn-primary w-full py-4">Create Free Account</button>
+          <button onClick={() => window.location.assign('#login')} className="btn btn-primary w-full py-4">Create Free Account</button>
         </div>
         <div className="card p-10 bg-slate-50 dark:bg-slate-900">
           <h3 className="text-2xl font-bold mb-4 text-slate-900 dark:text-white">For Teams</h3>
           <p className="text-slate-600 dark:text-slate-400 mb-8">Collaborative tools, shared assets, and team management.</p>
-          <button className="btn btn-secondary w-full py-4">Contact Sales</button>
+          <a href="https://github.com/Himal-Joshi/PDFQuill" target="_blank" rel="noopener noreferrer" className="btn btn-secondary w-full py-4 inline-block text-center">Contact Sales</a>
         </div>
       </div>
     </div>

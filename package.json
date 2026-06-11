@@ -11,5 +11,8 @@
     "build": "npm --prefix webapp/client run build",
     "lint": "npm --prefix webapp/client run lint",
     "check:server": "node --check webapp/server/index.js"
+  },
+  "dependencies": {
+    "firebase": "^12.14.0"
   }
 }

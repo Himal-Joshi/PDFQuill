@@ -4,6 +4,7 @@ webapp/server/uploads/
 webapp/server/outputs/
 .env
 .env.*
+.venv/
 .DS_Store
 *.pdf
 *.docx
