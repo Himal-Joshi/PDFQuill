@@ -119,16 +119,18 @@ const tools: ToolConfig[] = [
   },
 ];
 
-function App() {
-  const getInitialState = () => {
-    if (typeof window === 'undefined') return { view: 'main' as const, tool: null as Tool | null };
-    const hash = window.location.hash.slice(1);
-    if (!hash) return { view: 'main' as const, tool: null as Tool | null };
-    if (hash.startsWith('tool/')) return { view: 'main' as const, tool: hash.split('/')[1] as Tool };
-    return { view: hash as any, tool: null as Tool | null };
-  };
+type ViewType = 'main' | 'pricing' | 'solutions' | 'privacy' | 'terms' | 'login' | 'docs' | 'get-started';
 
-  const [view, setView] = useState<'main' | 'pricing' | 'solutions' | 'privacy' | 'terms' | 'login' | 'docs' | 'get-started'>(getInitialState().view);
+const getInitialState = () => {
+  if (typeof window === 'undefined') return { view: 'main' as ViewType, tool: null as Tool | null };
+  const hash = window.location.hash.slice(1);
+  if (!hash) return { view: 'main' as ViewType, tool: null as Tool | null };
+  if (hash.startsWith('tool/')) return { view: 'main' as ViewType, tool: hash.split('/')[1] as Tool };
+  return { view: hash as ViewType, tool: null as Tool | null };
+};
+
+function App() {
+  const [view, setView] = useState<ViewType>(getInitialState().view);
   const [activeTool, setActiveTool] = useState<Tool | null>(getInitialState().tool);
 
   useEffect(() => {
@@ -197,7 +199,7 @@ function App() {
   );
 
   const selectTool = (tool: Tool) => {
-    window.location.hash = `tool/${tool}`;
+    window.location.assign(`#tool/${tool}`);
     setFiles([]);
     setDownloadUrl('');
     setError('');
@@ -206,25 +208,27 @@ function App() {
   };
 
   const goHome = () => {
-    window.location.hash = '';
+    window.location.assign('#');
   };
 
   // Generate thumbnails when files change (for single-file PDF tools)
   useEffect(() => {
     if (files.length === 0 || activeTool === 'convert') {
-      setThumbnails([]);
+      Promise.resolve().then(() => setThumbnails([]));
       return;
     }
     // For merge, don't auto-generate thumbnails (multiple files)
     // For single-file tools, generate thumbnails of the first file
     if (activeTool !== 'merge' && files.length >= 1 && files[0].type === 'application/pdf') {
-      setLoadingThumbnails(true);
-      generateThumbnails(files[0], 180)
-        .then((t) => setThumbnails(t))
-        .catch(() => setThumbnails([]))
-        .finally(() => setLoadingThumbnails(false));
+      Promise.resolve().then(() => {
+        setLoadingThumbnails(true);
+        generateThumbnails(files[0], 180)
+          .then((t) => setThumbnails(t))
+          .catch(() => setThumbnails([]))
+          .finally(() => setLoadingThumbnails(false));
+      });
     } else {
-      setThumbnails([]);
+      Promise.resolve().then(() => setThumbnails([]));
     }
   }, [files, activeTool]);
 
@@ -321,8 +325,8 @@ function App() {
 
           <div className="hidden md:flex items-center gap-8">
             <button onClick={goHome} className={cn("text-sm font-semibold transition-colors duration-200", (activeTool === null && view === 'main') ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Tools</button>
-            <button onClick={() => window.location.hash = 'pricing'} className={cn("text-sm font-semibold transition-colors duration-200", view === 'pricing' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Pricing</button>
-            <button onClick={() => window.location.hash = 'solutions'} className={cn("text-sm font-semibold transition-colors duration-200", view === 'solutions' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Solutions</button>
+            <button onClick={() => window.location.assign('#pricing')} className={cn("text-sm font-semibold transition-colors duration-200", view === 'pricing' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Pricing</button>
+            <button onClick={() => window.location.assign('#solutions')} className={cn("text-sm font-semibold transition-colors duration-200", view === 'solutions' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Solutions</button>
           </div>
 
           <div className="flex items-center gap-4">
@@ -340,8 +344,8 @@ function App() {
               </div>
             ) : (
               <>
-                <button onClick={() => window.location.hash = 'login'} className="hidden sm:block btn btn-ghost">Login</button>
-                <button onClick={() => window.location.hash = 'get-started'} className="btn btn-primary">Get Started</button>
+                <button onClick={() => window.location.assign('#login')} className="hidden sm:block btn btn-ghost">Login</button>
+                <button onClick={() => window.location.assign('#get-started')} className="btn btn-primary">Get Started</button>
               </>
             )}
           </div>
@@ -355,7 +359,7 @@ function App() {
             {view === 'solutions' && <SolutionsView />}
             {view === 'privacy' && <PrivacyView />}
             {view === 'terms' && <TermsView />}
-            {view === 'login' && <LoginView onLogin={(u) => { setUser(u); window.location.hash = ''; localStorage.setItem('user', JSON.stringify(u)); }} />}
+            {view === 'login' && <LoginView onLogin={(u) => { setUser(u); window.location.assign('#'); localStorage.setItem('user', JSON.stringify(u)); }} />}
             {view === 'docs' && <DocsView />}
             {view === 'get-started' && <GetStartedView />}
             <button onClick={goHome} className="mt-12 btn btn-secondary">Back to Home</button>
@@ -387,10 +391,10 @@ function App() {
                     Merge, split, compress, and convert your documents with a premium toolkit designed for modern workflows. Fast, private, and 100% free.
                   </p>
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <button onClick={() => window.location.hash = 'solutions'} className="btn btn-primary px-8 py-4 text-base w-full sm:w-auto">
+                    <button onClick={() => window.location.assign('#solutions')} className="btn btn-primary px-8 py-4 text-base w-full sm:w-auto">
                       Explore All Tools
                     </button>
-                    <button onClick={() => window.location.hash = 'docs'} className="btn btn-secondary px-8 py-4 text-base w-full sm:w-auto">
+                    <button onClick={() => window.location.assign('#docs')} className="btn btn-secondary px-8 py-4 text-base w-full sm:w-auto">
                       View Documentation
                     </button>
                   </div>
@@ -731,8 +735,8 @@ function App() {
             <p className="text-xs font-medium text-slate-500">© {new Date().getFullYear()} PDFQuill Toolkit. Built for security & speed.</p>
           </div>
           <div className="flex flex-wrap justify-center gap-x-8 gap-y-4">
-            <button onClick={() => window.location.hash = 'privacy'} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Privacy</button>
-            <button onClick={() => window.location.hash = 'terms'} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Terms</button>
+            <button onClick={() => window.location.assign('#privacy')} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Privacy</button>
+            <button onClick={() => window.location.assign('#terms')} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Terms</button>
             <a className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest" href="https://github.com/Himal-Joshi/PDFQuill" target="_blank" rel="noopener noreferrer">Github</a>
             <a className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest" href="mailto:hello@pdfquill.com">Contact</a>
           </div>
