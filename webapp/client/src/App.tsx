@@ -214,7 +214,7 @@ function App() {
     e.currentTarget.classList.add('opacity-50', 'scale-95');
   };
 
-  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+  const handleDragEnter = (_e: React.DragEvent<HTMLDivElement>, index: number) => {
     dragOverItem.current = index;
   };
 
