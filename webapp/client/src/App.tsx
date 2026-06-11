@@ -1,8 +1,10 @@
-import { useMemo, useState, useEffect, type ChangeEvent, type ReactNode } from 'react';
+import { useMemo, useState, useEffect, useCallback, type ChangeEvent, type ReactNode } from 'react';
 // axios removed
 import {
   AlertCircle,
   CheckCircle,
+  ChevronUp,
+  ChevronDown,
   Download,
   FileImage,
   FileText,
@@ -25,6 +27,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { mergePdfs, splitPdf, compressPdf, rotatePdf, watermarkPdf, addPageNumbers, organizePdf, imagesToPdf } from './lib/pdfProcessing';
+import { validateEmailDomain, validatePassword, registerAccount, loginAccount } from './lib/auth';
+import { generateThumbnails, type PageThumbnail } from './lib/pdfThumbnails';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -116,8 +120,26 @@ const tools: ToolConfig[] = [
 ];
 
 function App() {
-  const [view, setView] = useState<'main' | 'pricing' | 'solutions' | 'privacy' | 'terms' | 'login' | 'docs' | 'get-started'>('main');
-  const [activeTool, setActiveTool] = useState<Tool | null>(null);
+  const getInitialState = () => {
+    if (typeof window === 'undefined') return { view: 'main' as const, tool: null as Tool | null };
+    const hash = window.location.hash.slice(1);
+    if (!hash) return { view: 'main' as const, tool: null as Tool | null };
+    if (hash.startsWith('tool/')) return { view: 'main' as const, tool: hash.split('/')[1] as Tool };
+    return { view: hash as any, tool: null as Tool | null };
+  };
+
+  const [view, setView] = useState<'main' | 'pricing' | 'solutions' | 'privacy' | 'terms' | 'login' | 'docs' | 'get-started'>(getInitialState().view);
+  const [activeTool, setActiveTool] = useState<Tool | null>(getInitialState().tool);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const state = getInitialState();
+      setView(state.view);
+      setActiveTool(state.tool);
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
   const [user, setUser] = useState<{ email: string; token: string } | null>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('user');
@@ -165,23 +187,65 @@ function App() {
   const [watermarkImage, setWatermarkImage] = useState<File | null>(null);
   const [organizeAction, setOrganizeAction] = useState<'reorder' | 'delete'>('reorder');
 
+  // Thumbnail state
+  const [thumbnails, setThumbnails] = useState<PageThumbnail[]>([]);
+  const [loadingThumbnails, setLoadingThumbnails] = useState(false);
+
   const selectedTool = useMemo(
     () => tools.find((tool) => tool.id === activeTool) ?? tools[0],
     [activeTool],
   );
 
   const selectTool = (tool: Tool) => {
-    setActiveTool(tool);
+    window.location.hash = `tool/${tool}`;
     setFiles([]);
     setDownloadUrl('');
     setError('');
     setWatermarkImage(null);
+    setThumbnails([]);
   };
 
   const goHome = () => {
-    setView('main');
-    setActiveTool(null);
+    window.location.hash = '';
   };
+
+  // Generate thumbnails when files change (for single-file PDF tools)
+  useEffect(() => {
+    if (files.length === 0 || activeTool === 'convert') {
+      setThumbnails([]);
+      return;
+    }
+    // For merge, don't auto-generate thumbnails (multiple files)
+    // For single-file tools, generate thumbnails of the first file
+    if (activeTool !== 'merge' && files.length >= 1 && files[0].type === 'application/pdf') {
+      setLoadingThumbnails(true);
+      generateThumbnails(files[0], 180)
+        .then((t) => setThumbnails(t))
+        .catch(() => setThumbnails([]))
+        .finally(() => setLoadingThumbnails(false));
+    } else {
+      setThumbnails([]);
+    }
+  }, [files, activeTool]);
+
+  // Reorder helpers for merge
+  const moveFileUp = useCallback((index: number) => {
+    if (index === 0) return;
+    setFiles((prev) => {
+      const next = [...prev];
+      [next[index - 1], next[index]] = [next[index], next[index - 1]];
+      return next;
+    });
+  }, []);
+
+  const moveFileDown = useCallback((index: number) => {
+    setFiles((prev) => {
+      if (index >= prev.length - 1) return prev;
+      const next = [...prev];
+      [next[index], next[index + 1]] = [next[index + 1], next[index]];
+      return next;
+    });
+  }, []);
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files) return;
@@ -257,8 +321,8 @@ function App() {
 
           <div className="hidden md:flex items-center gap-8">
             <button onClick={goHome} className={cn("text-sm font-semibold transition-colors duration-200", (activeTool === null && view === 'main') ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Tools</button>
-            <button onClick={() => setView('pricing')} className={cn("text-sm font-semibold transition-colors duration-200", view === 'pricing' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Pricing</button>
-            <button onClick={() => setView('solutions')} className={cn("text-sm font-semibold transition-colors duration-200", view === 'solutions' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Solutions</button>
+            <button onClick={() => window.location.hash = 'pricing'} className={cn("text-sm font-semibold transition-colors duration-200", view === 'pricing' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Pricing</button>
+            <button onClick={() => window.location.hash = 'solutions'} className={cn("text-sm font-semibold transition-colors duration-200", view === 'solutions' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Solutions</button>
           </div>
 
           <div className="flex items-center gap-4">
@@ -276,8 +340,8 @@ function App() {
               </div>
             ) : (
               <>
-                <button onClick={() => setView('login')} className="hidden sm:block btn btn-ghost">Login</button>
-                <button onClick={() => setView('get-started')} className="btn btn-primary">Get Started</button>
+                <button onClick={() => window.location.hash = 'login'} className="hidden sm:block btn btn-ghost">Login</button>
+                <button onClick={() => window.location.hash = 'get-started'} className="btn btn-primary">Get Started</button>
               </>
             )}
           </div>
@@ -291,7 +355,7 @@ function App() {
             {view === 'solutions' && <SolutionsView />}
             {view === 'privacy' && <PrivacyView />}
             {view === 'terms' && <TermsView />}
-            {view === 'login' && <LoginView onLogin={(u) => { setUser(u); setView('main'); localStorage.setItem('user', JSON.stringify(u)); }} />}
+            {view === 'login' && <LoginView onLogin={(u) => { setUser(u); window.location.hash = ''; localStorage.setItem('user', JSON.stringify(u)); }} />}
             {view === 'docs' && <DocsView />}
             {view === 'get-started' && <GetStartedView />}
             <button onClick={goHome} className="mt-12 btn btn-secondary">Back to Home</button>
@@ -323,10 +387,10 @@ function App() {
                     Merge, split, compress, and convert your documents with a premium toolkit designed for modern workflows. Fast, private, and 100% free.
                   </p>
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <button onClick={() => setView('solutions')} className="btn btn-primary px-8 py-4 text-base w-full sm:w-auto">
+                    <button onClick={() => window.location.hash = 'solutions'} className="btn btn-primary px-8 py-4 text-base w-full sm:w-auto">
                       Explore All Tools
                     </button>
-                    <button onClick={() => setView('docs')} className="btn btn-secondary px-8 py-4 text-base w-full sm:w-auto">
+                    <button onClick={() => window.location.hash = 'docs'} className="btn btn-secondary px-8 py-4 text-base w-full sm:w-auto">
                       View Documentation
                     </button>
                   </div>
@@ -442,11 +506,11 @@ function App() {
                   >
                     <div className="mb-6 flex items-center justify-between">
                       <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                        Queue ({files.length})
+                        {activeTool === 'merge' ? `Merge Order (${files.length} files)` : `Queue (${files.length})`}
                       </h3>
                       <button
                         type="button"
-                        onClick={() => setFiles([])}
+                        onClick={() => { setFiles([]); setThumbnails([]); }}
                         className="text-xs font-bold text-red-500 hover:text-red-600 transition-colors"
                       >
                         REMOVE ALL
@@ -461,6 +525,12 @@ function App() {
                           className="flex items-center justify-between gap-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 px-4 py-3 group/item"
                         >
                           <div className="flex min-w-0 items-center gap-3">
+                            {/* Order badge for merge */}
+                            {activeTool === 'merge' && (
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary text-sm font-black">
+                                {index + 1}
+                              </div>
+                            )}
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white dark:bg-slate-800 text-primary shadow-sm border border-slate-100 dark:border-slate-700">
                               {file.type.startsWith('image/') ? <FileImage size={20} /> : <FileText size={20} />}
                             </div>
@@ -469,17 +539,95 @@ function App() {
                               <p className="text-xs font-medium text-slate-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
                             </div>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => removeFile(index)}
-                            className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 transition-all opacity-0 group-item-hover:opacity-100"
-                            aria-label={`Remove ${file.name}`}
-                          >
-                            <Trash2 size={18} />
-                          </button>
+                          <div className="flex items-center gap-1">
+                            {/* Reorder controls for merge */}
+                            {activeTool === 'merge' && files.length > 1 && (
+                              <div className="flex flex-col">
+                                <button
+                                  type="button"
+                                  onClick={() => moveFileUp(index)}
+                                  disabled={index === 0}
+                                  className={cn(
+                                    "rounded p-1 transition-all",
+                                    index === 0
+                                      ? "text-slate-200 dark:text-slate-700 cursor-not-allowed"
+                                      : "text-slate-400 hover:bg-primary/10 hover:text-primary"
+                                  )}
+                                  aria-label="Move up"
+                                >
+                                  <ChevronUp size={16} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => moveFileDown(index)}
+                                  disabled={index === files.length - 1}
+                                  className={cn(
+                                    "rounded p-1 transition-all",
+                                    index === files.length - 1
+                                      ? "text-slate-200 dark:text-slate-700 cursor-not-allowed"
+                                      : "text-slate-400 hover:bg-primary/10 hover:text-primary"
+                                  )}
+                                  aria-label="Move down"
+                                >
+                                  <ChevronDown size={16} />
+                                </button>
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => removeFile(index)}
+                              className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 transition-all"
+                              aria-label={`Remove ${file.name}`}
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
                         </motion.div>
                       ))}
                     </div>
+                  </motion.div>
+                )}
+
+                {/* Page Thumbnails Grid */}
+                {files.length > 0 && activeTool !== 'merge' && activeTool !== 'convert' && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.15 }}
+                    className="card p-6"
+                  >
+                    <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-6">
+                      Page Preview
+                    </h3>
+                    {loadingThumbnails ? (
+                      <div className="flex flex-col items-center justify-center py-12 gap-3">
+                        <Loader2 className="animate-spin text-primary" size={32} />
+                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Rendering pages…</p>
+                      </div>
+                    ) : thumbnails.length > 0 ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        {thumbnails.map((thumb) => (
+                          <div
+                            key={thumb.pageNumber}
+                            className="group/thumb flex flex-col items-center gap-2"
+                          >
+                            <div className="relative rounded-xl border-2 border-slate-100 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900 shadow-sm hover:border-primary/40 hover:shadow-md transition-all duration-200">
+                              <img
+                                src={thumb.dataUrl}
+                                alt={`Page ${thumb.pageNumber}`}
+                                className="w-full h-auto block"
+                                loading="lazy"
+                              />
+                            </div>
+                            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 group-hover/thumb:text-primary transition-colors">
+                              {thumb.pageNumber}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-8">No pages to preview.</p>
+                    )}
                   </motion.div>
                 )}
 
@@ -553,10 +701,11 @@ function App() {
                       </div>
                       <a
                         href={downloadUrl}
+                        download={`PDFQuill${activeTool}${activeTool === 'split' && splitMode === 'all' ? '.zip' : '.pdf'}`}
                         className="btn bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-4 text-lg shadow-lg shadow-emerald-600/20"
                       >
                         <Download size={20} className="mr-2" />
-                        Download PDF
+                        Download
                       </a>
                     </motion.div>
                   )}
@@ -582,8 +731,8 @@ function App() {
             <p className="text-xs font-medium text-slate-500">© {new Date().getFullYear()} PDFQuill Toolkit. Built for security & speed.</p>
           </div>
           <div className="flex flex-wrap justify-center gap-x-8 gap-y-4">
-            <button onClick={() => setView('privacy')} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Privacy</button>
-            <button onClick={() => setView('terms')} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Terms</button>
+            <button onClick={() => window.location.hash = 'privacy'} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Privacy</button>
+            <button onClick={() => window.location.hash = 'terms'} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Terms</button>
             <a className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest" href="https://github.com/Himal-Joshi/PDFQuill" target="_blank" rel="noopener noreferrer">Github</a>
             <a className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest" href="mailto:hello@pdfquill.com">Contact</a>
           </div>
@@ -851,8 +1000,17 @@ function LoginView({ onLogin }: { onLogin: (user: { email: string; token: string
   const [isRegistering, setIsRegistering] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Real-time password validation (only shown during registration)
+  const pwValidation = useMemo(() => validatePassword(password), [password]);
+  const emailDomainCheck = useMemo(() => {
+    if (!email || !email.includes('@')) return null;
+    return validateEmailDomain(email);
+  }, [email]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -860,27 +1018,56 @@ function LoginView({ onLogin }: { onLogin: (user: { email: string; token: string
       setError('Please enter your email and password.');
       return;
     }
+
+    if (isRegistering) {
+      // Confirm password check
+      if (password !== confirmPassword) {
+        setError('Passwords do not match.');
+        return;
+      }
+    }
+
     setError('');
     setIsLoading(true);
 
-    // Mock network request
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    try {
+      // Small delay for perceived UX
+      await new Promise((resolve) => setTimeout(resolve, 400));
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.');
+      if (isRegistering) {
+        const result = await registerAccount(email, password);
+        if (!result.success) {
+          setError(result.error ?? 'Registration failed.');
+          setIsLoading(false);
+          return;
+        }
+        onLogin({ email: result.email!, token: result.token! });
+      } else {
+        const result = await loginAccount(email, password);
+        if (!result.success) {
+          setError(result.error ?? 'Login failed.');
+          setIsLoading(false);
+          return;
+        }
+        onLogin({ email: result.email!, token: result.token! });
+      }
+    } catch {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    // Generate mock JWT token
-    const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-    const payload = btoa(JSON.stringify({ sub: email, iat: Date.now() }));
-    const signature = btoa('mock-signature-do-not-use-in-prod');
-    const token = `${header}.${payload}.${signature}`;
-
-    onLogin({ email, token });
-    setIsLoading(false);
   };
+
+  const pwRequirements = [
+    { label: '8+ characters', met: password.length >= 8 },
+    { label: 'Uppercase letter', met: /[A-Z]/.test(password) },
+    { label: 'Number', met: /[0-9]/.test(password) },
+    { label: 'Special character', met: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(password) },
+  ];
+
+  const strengthPercent = password.length === 0 ? 0 : (pwRequirements.filter((r) => r.met).length / pwRequirements.length) * 100;
+  const strengthColor = strengthPercent <= 25 ? 'bg-red-500' : strengthPercent <= 50 ? 'bg-orange-500' : strengthPercent <= 75 ? 'bg-yellow-500' : 'bg-emerald-500';
+  const strengthLabel = strengthPercent <= 25 ? 'Weak' : strengthPercent <= 50 ? 'Fair' : strengthPercent <= 75 ? 'Good' : 'Strong';
 
   return (
     <div className="max-w-md mx-auto">
@@ -901,28 +1088,158 @@ function LoginView({ onLogin }: { onLogin: (user: { email: string; token: string
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Email Field */}
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Email</label>
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="input-control w-full bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm"
+                onChange={(e) => { setEmail(e.target.value); setError(''); }}
+                className={cn(
+                  "input-control w-full bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm",
+                  isRegistering && emailDomainCheck && !emailDomainCheck.valid && "border-red-400 dark:border-red-500 focus:ring-red-400"
+                )}
                 placeholder="you@example.com"
                 required
+                autoComplete="email"
               />
+              {isRegistering && emailDomainCheck && !emailDomainCheck.valid && (
+                <motion.p
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-2 text-xs text-red-500 dark:text-red-400 font-medium"
+                >
+                  {emailDomainCheck.error}
+                </motion.p>
+              )}
+              {isRegistering && emailDomainCheck && emailDomainCheck.valid && (
+                <motion.p
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-2 text-xs text-emerald-500 dark:text-emerald-400 font-medium flex items-center gap-1"
+                >
+                  <CheckCircle size={12} /> Email domain accepted
+                </motion.p>
+              )}
             </div>
+
+            {/* Password Field */}
             <div>
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="input-control w-full bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm"
-                placeholder="••••••••"
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                  className="input-control w-full bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm pr-12"
+                  placeholder="••••••••"
+                  required
+                  autoComplete={isRegistering ? 'new-password' : 'current-password'}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors text-xs font-bold uppercase tracking-wider"
+                  tabIndex={-1}
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+
+              {/* Password strength meter — only during registration */}
+              {isRegistering && password.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="mt-3 space-y-3"
+                >
+                  {/* Strength bar */}
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                      <motion.div
+                        className={cn("h-full rounded-full transition-colors duration-300", strengthColor)}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${strengthPercent}%` }}
+                        transition={{ duration: 0.3 }}
+                      />
+                    </div>
+                    <span className={cn(
+                      "text-xs font-bold uppercase tracking-wider min-w-[50px] text-right",
+                      strengthPercent <= 25 ? 'text-red-500' : strengthPercent <= 50 ? 'text-orange-500' : strengthPercent <= 75 ? 'text-yellow-500' : 'text-emerald-500'
+                    )}>
+                      {strengthLabel}
+                    </span>
+                  </div>
+
+                  {/* Requirements checklist */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                    {pwRequirements.map((req) => (
+                      <div key={req.label} className="flex items-center gap-1.5">
+                        <div className={cn(
+                          "w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 transition-all duration-200",
+                          req.met 
+                            ? "bg-emerald-500 text-white scale-100" 
+                            : "bg-slate-200 dark:bg-slate-700 scale-90"
+                        )}>
+                          {req.met && (
+                            <svg className="w-2 h-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </div>
+                        <span className={cn(
+                          "text-xs font-medium transition-colors",
+                          req.met ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-slate-500"
+                        )}>
+                          {req.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
             </div>
+
+            {/* Confirm Password — only during registration */}
+            {isRegistering && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+              >
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Confirm Password</label>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => { setConfirmPassword(e.target.value); setError(''); }}
+                  className={cn(
+                    "input-control w-full bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm",
+                    confirmPassword.length > 0 && password !== confirmPassword && "border-red-400 dark:border-red-500"
+                  )}
+                  placeholder="••••••••"
+                  required
+                  autoComplete="new-password"
+                />
+                {confirmPassword.length > 0 && password !== confirmPassword && (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="mt-2 text-xs text-red-500 dark:text-red-400 font-medium"
+                  >
+                    Passwords do not match
+                  </motion.p>
+                )}
+                {confirmPassword.length > 0 && password === confirmPassword && password.length > 0 && (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="mt-2 text-xs text-emerald-500 dark:text-emerald-400 font-medium flex items-center gap-1"
+                  >
+                    <CheckCircle size={12} /> Passwords match
+                  </motion.p>
+                )}
+              </motion.div>
+            )}
 
             <AnimatePresence>
               {error && (
@@ -940,16 +1257,16 @@ function LoginView({ onLogin }: { onLogin: (user: { email: string; token: string
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || (isRegistering && (!pwValidation.valid || (emailDomainCheck !== null && !emailDomainCheck.valid) || password !== confirmPassword))}
               className={cn(
                 "btn btn-primary w-full py-4 text-base shadow-xl shadow-primary/20",
-                isLoading && "opacity-80 cursor-wait"
+                (isLoading || (isRegistering && !pwValidation.valid)) && "opacity-60 cursor-not-allowed"
               )}
             >
               {isLoading ? (
                 <Loader2 className="animate-spin mx-auto" size={20} />
               ) : (
-                isRegistering ? 'Sign Up' : 'Sign In'
+                isRegistering ? 'Create Account' : 'Sign In'
               )}
             </button>
           </form>
@@ -959,7 +1276,7 @@ function LoginView({ onLogin }: { onLogin: (user: { email: string; token: string
               {isRegistering ? "Already have an account?" : "Don't have an account?"}
               <button
                 type="button"
-                onClick={() => { setIsRegistering(!isRegistering); setError(''); }}
+                onClick={() => { setIsRegistering(!isRegistering); setError(''); setConfirmPassword(''); }}
                 className="ml-2 text-primary hover:text-primary/80 font-bold transition-colors"
               >
                 {isRegistering ? 'Sign In' : 'Sign Up'}
