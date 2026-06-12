@@ -372,7 +372,7 @@ function App() {
         <div className="flex justify-between items-center h-20 px-6 max-w-7xl mx-auto">
           <div className="flex items-center gap-3 cursor-pointer select-none group" onClick={goHome}>
             <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform duration-300">
-              <img src="/PDFQuill/logo.svg" alt="PDFQuill" className="w-7 h-7 object-contain" />
+              <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="PDFQuill" className="w-7 h-7 object-contain" />
             </div>
             <span className="font-display text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
               <span className="dark:text-white">PDF</span><span className="text-primary">Quill</span>
@@ -820,7 +820,7 @@ function App() {
           <div className="flex flex-col items-center md:items-start gap-2">
             <div className="flex items-center gap-2 select-none cursor-pointer group" onClick={goHome}>
               <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center opacity-80 group-hover:opacity-100 transition-opacity">
-                <img src="/PDFQuill/logo.svg" alt="" className="w-5 h-5" />
+                <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="" className="w-5 h-5" />
               </div>
               <span className="font-display text-lg font-bold tracking-tight text-slate-900 dark:text-white">
                 <span className="dark:text-white">PDF</span><span className="text-primary">Quill</span>

@@ -3,9 +3,11 @@ import react from '@vitejs/plugin-react-swc'
 import tailwindcss from '@tailwindcss/postcss'
 import autoprefixer from 'autoprefixer'
 
+const isGitHubPages = process.env.GITHUB_ACTIONS === 'true';
+
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/PDFQuill/',
+  base: isGitHubPages ? '/PDFQuill/' : '/',
   plugins: [react()],
   server: {
     proxy: {
