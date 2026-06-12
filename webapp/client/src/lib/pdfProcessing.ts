@@ -318,3 +318,109 @@ export async function imagesToPdf(files: File[], onProgress?: (p: number) => voi
   const blob = new Blob([convertedBytes as unknown as BlobPart], { type: 'application/pdf' });
   return URL.createObjectURL(blob);
 }
+
+export type ConversionResult = { url: string; extension: string };
+
+export async function pdfToImages(file: File, onProgress?: (p: number) => void): Promise<ConversionResult> {
+  const bytes = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+  const totalPages = pdf.numPages;
+
+  if (totalPages === 1) {
+    // Single page → return a single PNG
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 2.0 });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not create canvas context.');
+    await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+    if (onProgress) onProgress(80);
+
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Failed to create image.'))), 'image/png');
+    });
+    if (onProgress) onProgress(100);
+    return { url: URL.createObjectURL(blob), extension: 'png' };
+  }
+
+  // Multi-page → return a ZIP of PNGs
+  const zip = new JSZip();
+  for (let i = 1; i <= totalPages; i++) {
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale: 2.0 });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) continue;
+    await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Failed to create image.'))), 'image/png');
+    });
+    zip.file(`page-${i}.png`, blob);
+    if (onProgress) onProgress(Math.round((i / totalPages) * 80));
+  }
+
+  const zipBlob = await zip.generateAsync({ type: 'blob' });
+  if (onProgress) onProgress(100);
+  return { url: URL.createObjectURL(zipBlob), extension: 'zip' };
+}
+
+function loadImage(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error(`Failed to load image: ${file.name}`));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+export async function compressImages(
+  files: File[],
+  quality: number,
+  scale: number,
+  onProgress?: (p: number) => void
+): Promise<ConversionResult> {
+  const compressOne = async (file: File): Promise<Blob> => {
+    const img = await loadImage(file);
+    const width = Math.round(img.naturalWidth * scale);
+    const height = Math.round(img.naturalHeight * scale);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not create canvas context.');
+    ctx.drawImage(img, 0, 0, width, height);
+    URL.revokeObjectURL(img.src);
+
+    return new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error('Failed to compress image.'))),
+        'image/jpeg',
+        quality
+      );
+    });
+  };
+
+  if (files.length === 1) {
+    const blob = await compressOne(files[0]);
+    if (onProgress) onProgress(100);
+    return { url: URL.createObjectURL(blob), extension: 'jpg' };
+  }
+
+  const zip = new JSZip();
+  for (let i = 0; i < files.length; i++) {
+    const blob = await compressOne(files[i]);
+    const baseName = files[i].name.replace(/\.[^.]+$/, '');
+    zip.file(`${baseName}_compressed.jpg`, blob);
+    if (onProgress) onProgress(Math.round(((i + 1) / files.length) * 80));
+  }
+
+  const zipBlob = await zip.generateAsync({ type: 'blob' });
+  if (onProgress) onProgress(100);
+  return { url: URL.createObjectURL(zipBlob), extension: 'zip' };
+}

@@ -9,6 +9,7 @@ import {
   FileImage,
   FileText,
   Hash,
+  Image,
   Layers,
   Loader2,
   Merge,
@@ -26,7 +27,7 @@ import {
 import { AnimatePresence, motion } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { mergePdfs, splitPdf, compressPdf, rotatePdf, watermarkPdf, addPageNumbers, organizePdf, imagesToPdf } from './lib/pdfProcessing';
+import { mergePdfs, splitPdf, compressPdf, rotatePdf, watermarkPdf, addPageNumbers, organizePdf, imagesToPdf, pdfToImages, compressImages, type ConversionResult } from './lib/pdfProcessing';
 import { auth } from './lib/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
@@ -39,7 +40,7 @@ function cn(...inputs: ClassValue[]) {
 
 // const API_BASE = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? '/PDFQuill' : '/PDFQuill');
 
-type Tool = 'merge' | 'split' | 'compress' | 'rotate' | 'watermark' | 'page-numbers' | 'organize' | 'convert';
+type Tool = 'merge' | 'split' | 'compress' | 'rotate' | 'watermark' | 'page-numbers' | 'organize' | 'convert' | 'pdf-to-image' | 'compress-image';
 
 type ToolConfig = {
   id: Tool;
@@ -119,6 +120,24 @@ const tools: ToolConfig[] = [
     endpoint: '/api/organize',
     icon: 'view_list',
     lucideIcon: Layers,
+  },
+  {
+    id: 'pdf-to-image',
+    label: 'PDF to Image',
+    description: 'Convert each PDF page into a high-resolution PNG image.',
+    endpoint: '',
+    icon: 'image',
+    lucideIcon: Image,
+  },
+  {
+    id: 'compress-image',
+    label: 'Compress Image',
+    description: 'Reduce image file size with adjustable quality and dimensions.',
+    endpoint: '',
+    icon: 'compress',
+    lucideIcon: Minimize2,
+    acceptsImages: true,
+    multiple: true,
   },
 ];
 
@@ -201,6 +220,9 @@ function App() {
   const [watermarkText, setWatermarkText] = useState('DRAFT');
   const [watermarkImage, setWatermarkImage] = useState<File | null>(null);
   const [organizeAction, setOrganizeAction] = useState<'reorder' | 'delete'>('reorder');
+  const [imageQuality, setImageQuality] = useState(0.75);
+  const [imageScale, setImageScale] = useState(1.0);
+  const [downloadExtension, setDownloadExtension] = useState('pdf');
 
   // Thumbnail state
   const [thumbnails, setThumbnails] = useState<PageThumbnail[]>([]);
@@ -257,7 +279,7 @@ function App() {
 
   // Generate thumbnails when files change (for single-file PDF tools)
   useEffect(() => {
-    if (files.length === 0 || activeTool === 'convert') {
+    if (files.length === 0 || activeTool === 'convert' || activeTool === 'compress-image') {
       Promise.resolve().then(() => setThumbnails([]));
       return;
     }
@@ -344,6 +366,14 @@ function App() {
         resultUrl = await organizePdf(files[0], organizeAction, pageRange);
       } else if (activeTool === 'convert') {
         resultUrl = await imagesToPdf(files);
+      } else if (activeTool === 'pdf-to-image') {
+        const result: ConversionResult = await pdfToImages(files[0]);
+        resultUrl = result.url;
+        setDownloadExtension(result.extension);
+      } else if (activeTool === 'compress-image') {
+        const result: ConversionResult = await compressImages(files, imageQuality, imageScale);
+        resultUrl = result.url;
+        setDownloadExtension(result.extension);
       }
       
       if (Array.isArray(resultUrl)) {
@@ -650,7 +680,7 @@ function App() {
                 )}
 
                 {/* Page Thumbnails Grid */}
-                {files.length > 0 && activeTool !== 'merge' && activeTool !== 'convert' && (
+                {files.length > 0 && activeTool !== 'merge' && activeTool !== 'convert' && activeTool !== 'compress-image' && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -727,6 +757,10 @@ function App() {
                     setWatermarkImage={setWatermarkImage}
                     organizeAction={organizeAction}
                     setOrganizeAction={setOrganizeAction}
+                    imageQuality={imageQuality}
+                    setImageQuality={setImageQuality}
+                    imageScale={imageScale}
+                    setImageScale={setImageScale}
                   />
 
                   <button
@@ -776,7 +810,7 @@ function App() {
                       </div>
                       <a
                         href={downloadUrl}
-                        download={`PDFQuill_${activeTool}${activeTool === 'split' && splitMode === 'all' ? '.zip' : '.pdf'}`}
+                        download={`PDFQuill_${activeTool}${activeTool === 'split' && splitMode === 'all' ? '.zip' : (activeTool === 'pdf-to-image' || activeTool === 'compress-image') ? `.${downloadExtension}` : '.pdf'}`}
                         className="btn bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-4 text-lg shadow-lg shadow-emerald-600/20"
                       >
                         <Download size={20} className="mr-2" />
@@ -859,6 +893,10 @@ type ToolOptionsProps = {
   setWatermarkImage: (value: File | null) => void;
   organizeAction: 'reorder' | 'delete';
   setOrganizeAction: (value: 'reorder' | 'delete') => void;
+  imageQuality: number;
+  setImageQuality: (value: number) => void;
+  imageScale: number;
+  setImageScale: (value: number) => void;
 };
 
 function ToolOptions({
@@ -880,6 +918,10 @@ function ToolOptions({
   setWatermarkImage,
   organizeAction,
   setOrganizeAction,
+  imageQuality,
+  setImageQuality,
+  imageScale,
+  setImageScale,
 }: ToolOptionsProps) {
   if (activeTool === 'split') {
     return (
@@ -1043,6 +1085,47 @@ function ToolOptions({
 
   if (activeTool === 'compress') {
     return <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Our advanced compression algorithm will optimize your PDF for the web while maintaining high visual quality.</p>;
+  }
+
+  if (activeTool === 'pdf-to-image') {
+    return <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Each page will be rendered as a high-resolution PNG image. Multi-page PDFs are delivered as a ZIP archive.</p>;
+  }
+
+  if (activeTool === 'compress-image') {
+    return (
+      <div className="grid gap-6">
+        <Field label={`Image Quality (${Math.round(imageQuality * 100)}%)`}>
+          <input
+            type="range"
+            min="0.1"
+            max="1"
+            step="0.05"
+            value={imageQuality}
+            onChange={(e) => setImageQuality(Number(e.target.value))}
+            className="w-full accent-primary"
+          />
+          <div className="flex justify-between text-xs font-medium text-slate-400">
+            <span>Low</span>
+            <span>High</span>
+          </div>
+        </Field>
+        <Field label={`Resize Scale (${Math.round(imageScale * 100)}%)`}>
+          <input
+            type="range"
+            min="0.1"
+            max="1"
+            step="0.05"
+            value={imageScale}
+            onChange={(e) => setImageScale(Number(e.target.value))}
+            className="w-full accent-primary"
+          />
+          <div className="flex justify-between text-xs font-medium text-slate-400">
+            <span>Small</span>
+            <span>Original</span>
+          </div>
+        </Field>
+      </div>
+    );
   }
 
   if (activeTool === null) return null;
