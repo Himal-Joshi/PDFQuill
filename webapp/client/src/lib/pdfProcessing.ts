@@ -1,5 +1,9 @@
 import { PDFDocument, StandardFonts, degrees, rgb } from 'pdf-lib';
 import JSZip from 'jszip';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Ensure worker is configured for pdfjs-dist
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 function parsePageList(value: string, totalPages: number): number[] {
   if (!value || !value.trim()) {
@@ -50,10 +54,96 @@ export async function mergePdfs(files: File[], onProgress?: (p: number) => void)
   return URL.createObjectURL(blob);
 }
 
-export async function splitPdf(file: File, mode: 'all' | 'range', pageRange: string, onProgress?: (p: number) => void): Promise<string> {
+export type SplitResult = string | { url: string; name: string }[];
+
+export async function splitPdf(
+  file: File,
+  mode: 'all' | 'range' | 'color',
+  pageRange: string,
+  onProgress?: (p: number) => void
+): Promise<SplitResult> {
   const bytes = await file.arrayBuffer();
   const source = await PDFDocument.load(bytes, { ignoreEncryption: true });
   const totalPages = source.getPageCount();
+
+  if (mode === 'color') {
+    // 1. Render and analyze pages
+    const colorPages: number[] = [];
+    const bwPages: number[] = [];
+    
+    // We load a separate instance in pdfjs-dist to render pages
+    const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes.slice(0)) }).promise;
+    
+    for (let i = 1; i <= totalPages; i++) {
+      const page = await pdf.getPage(i);
+      // Low resolution scale to save memory/time
+      const viewport = page.getViewport({ scale: 0.5 });
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) continue;
+      
+      await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+      
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+      
+      let coloredPixels = 0;
+      const threshold = 15; // color difference tolerance (to account for JPEG artifacts)
+      
+      // Analyze every pixel (R, G, B, A)
+      for (let p = 0; p < data.length; p += 4) {
+        const r = data[p];
+        const g = data[p + 1];
+        const b = data[p + 2];
+        
+        // If max diff between color channels is > threshold, it's a colored pixel
+        const maxDiff = Math.max(Math.abs(r - g), Math.abs(g - b), Math.abs(r - b));
+        if (maxDiff > threshold) {
+          coloredPixels++;
+        }
+      }
+      
+      const totalPixels = canvas.width * canvas.height;
+      const colorRatio = coloredPixels / totalPixels;
+      
+      // If more than 0.1% of pixels are colored, we consider the page "Color"
+      if (colorRatio > 0.001) {
+        colorPages.push(i - 1); // 0-indexed
+      } else {
+        bwPages.push(i - 1); // 0-indexed
+      }
+      
+      if (onProgress) onProgress(Math.round((i / totalPages) * 50));
+    }
+
+    const results: { url: string; name: string }[] = [];
+    
+    // 2. Create the Color PDF
+    if (colorPages.length > 0) {
+      const colorDoc = await PDFDocument.create();
+      await copyPages(source, colorDoc, colorPages);
+      const colorBytes = await colorDoc.save({ useObjectStreams: true });
+      const blob = new Blob([colorBytes as unknown as BlobPart], { type: 'application/pdf' });
+      results.push({ url: URL.createObjectURL(blob), name: 'Color_Pages.pdf' });
+    }
+    
+    if (onProgress) onProgress(75);
+    
+    // 3. Create the B&W PDF
+    if (bwPages.length > 0) {
+      const bwDoc = await PDFDocument.create();
+      await copyPages(source, bwDoc, bwPages);
+      const bwBytes = await bwDoc.save({ useObjectStreams: true });
+      const blob = new Blob([bwBytes as unknown as BlobPart], { type: 'application/pdf' });
+      results.push({ url: URL.createObjectURL(blob), name: 'BW_Pages.pdf' });
+    }
+    
+    if (onProgress) onProgress(100);
+    return results;
+  }
 
   if (mode === 'range') {
     const selectedPages = parsePageList(pageRange, totalPages);

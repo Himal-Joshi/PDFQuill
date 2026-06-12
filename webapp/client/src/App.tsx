@@ -190,8 +190,9 @@ function App() {
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState('');
+  const [downloadUrls, setDownloadUrls] = useState<{url: string, name: string}[]>([]);
   const [error, setError] = useState('');
-  const [splitMode, setSplitMode] = useState<'all' | 'range'>('all');
+  const [splitMode, setSplitMode] = useState<'all' | 'range' | 'color'>('all');
   const [pageRange, setPageRange] = useState('');
   const [rotation, setRotation] = useState(90);
   const [rotationMode, setRotationMode] = useState<'all' | 'specific'>('all');
@@ -244,6 +245,7 @@ function App() {
     window.location.assign(`#tool/${tool}`);
     setFiles([]);
     setDownloadUrl('');
+    setDownloadUrls([]);
     setError('');
     setWatermarkImage(null);
     setThumbnails([]);
@@ -293,11 +295,17 @@ function App() {
     });
   }, []);
 
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files) return;
-    const selectedFiles = Array.from(event.target.files);
-    setFiles(selectedTool.multiple ? [...files, ...selectedFiles] : selectedFiles.slice(0, 1));
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) return;
+    const newFiles = Array.from(event.target.files);
+    
+    if (selectedTool.multiple) {
+      setFiles((current) => [...current, ...newFiles]);
+    } else {
+      setFiles([newFiles[0]]);
+    }
     setDownloadUrl('');
+    setDownloadUrls([]);
     setError('');
     event.target.value = '';
   };
@@ -316,9 +324,10 @@ function App() {
     setLoading(true);
     setError('');
     setDownloadUrl('');
+    setDownloadUrls([]);
 
     try {
-      let resultUrl = '';
+      let resultUrl: string | { url: string; name: string }[] = '';
       if (activeTool === 'merge') {
         resultUrl = await mergePdfs(files);
       } else if (activeTool === 'split') {
@@ -336,7 +345,12 @@ function App() {
       } else if (activeTool === 'convert') {
         resultUrl = await imagesToPdf(files);
       }
-      setDownloadUrl(resultUrl);
+      
+      if (Array.isArray(resultUrl)) {
+        setDownloadUrls(resultUrl);
+      } else {
+        setDownloadUrl(resultUrl);
+      }
     } catch (requestError: unknown) {
       if (requestError instanceof Error) {
         setError(requestError.message);
@@ -762,12 +776,34 @@ function App() {
                       </div>
                       <a
                         href={downloadUrl}
-                        download={`PDFQuill${activeTool}${activeTool === 'split' && splitMode === 'all' ? '.zip' : '.pdf'}`}
+                        download={`PDFQuill_${activeTool}${activeTool === 'split' && splitMode === 'all' ? '.zip' : '.pdf'}`}
                         className="btn bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-4 text-lg shadow-lg shadow-emerald-600/20"
                       >
                         <Download size={20} className="mr-2" />
                         Download
                       </a>
+                    </motion.div>
+                  )}
+
+                  {downloadUrls.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      className="flex flex-col gap-4 mt-4"
+                    >
+                      <h3 className="font-display text-xl font-extrabold tracking-tight">Downloads Ready</h3>
+                      {downloadUrls.map((dl, idx) => (
+                        <a
+                          key={idx}
+                          href={dl.url}
+                          download={dl.name}
+                          className="btn bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-4 text-lg shadow-lg shadow-emerald-600/20 flex justify-center items-center"
+                        >
+                          <Download size={20} className="mr-2" />
+                          Download {dl.name.replace('.pdf', '').replace('_', ' ')}
+                        </a>
+                      ))}
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -806,8 +842,8 @@ function App() {
 
 type ToolOptionsProps = {
   activeTool: Tool | null;
-  splitMode: 'all' | 'range';
-  setSplitMode: (value: 'all' | 'range') => void;
+  splitMode: 'all' | 'range' | 'color';
+  setSplitMode: (value: 'all' | 'range' | 'color') => void;
   pageRange: string;
   setPageRange: (value: string) => void;
   rotation: number;
@@ -847,16 +883,29 @@ function ToolOptions({
 }: ToolOptionsProps) {
   if (activeTool === 'split') {
     return (
-      <div className="grid gap-6 sm:grid-cols-2">
+      <div className="grid gap-6">
         <Field label="Split mode">
-          <select
-            value={splitMode}
-            onChange={(event) => setSplitMode(event.target.value as 'all' | 'range')}
-            className="input-control"
-          >
-            <option value="all">Every page</option>
-            <option value="range">Specific range</option>
-          </select>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[
+              { id: 'all', label: 'Every page' },
+              { id: 'range', label: 'Specific range' },
+              { id: 'color', label: 'Color vs B&W' },
+            ].map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setSplitMode(option.id as 'all' | 'range' | 'color')}
+                className={cn(
+                  'rounded-xl border-2 py-4 px-2 text-sm font-bold transition-all duration-200 text-center',
+                  splitMode === option.id
+                    ? 'border-primary bg-primary/5 text-primary shadow-inner'
+                    : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-primary/30'
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         </Field>
         {splitMode === 'range' && (
           <Field label="Pages to Extract">
