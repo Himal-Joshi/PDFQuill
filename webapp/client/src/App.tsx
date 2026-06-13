@@ -59,6 +59,7 @@ type ToolConfig = {
   lucideIcon: LucideIcon;
   acceptsImages?: boolean;
   multiple?: boolean;
+  requiresUser?: boolean;
 };
 
 const tools: ToolConfig[] = [
@@ -112,6 +113,7 @@ const tools: ToolConfig[] = [
     endpoint: '/api/watermark',
     icon: 'text_fields',
     lucideIcon: Type,
+    requiresUser: true,
   },
   {
     id: 'page-numbers',
@@ -154,6 +156,7 @@ const tools: ToolConfig[] = [
     endpoint: '',
     icon: 'document_scanner',
     lucideIcon: ScanText,
+    requiresUser: true,
   },
   {
     id: 'ocr-extract',
@@ -162,6 +165,7 @@ const tools: ToolConfig[] = [
     endpoint: '',
     icon: 'manage_search',
     lucideIcon: FileSearch,
+    requiresUser: true,
   },
   {
     id: 'html-to-pdf',
@@ -190,10 +194,11 @@ const tools: ToolConfig[] = [
   {
     id: 'unlock-pdf',
     label: 'Unlock PDF',
-    description: 'Remove password protection from an encrypted PDF.',
+    description: 'Remove password protection and restrictions from your PDF.',
     endpoint: '',
     icon: 'lock_open',
     lucideIcon: Unlock,
+    requiresUser: true,
   },
 ];
 
@@ -332,6 +337,12 @@ function App() {
   );
 
   const selectTool = (tool: Tool) => {
+    const toolConfig = tools.find((t) => t.id === tool);
+    if (toolConfig?.requiresUser && !user) {
+      setError(`Please sign in with Google to use the ${toolConfig.label} feature.`);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     window.location.assign(`#tool/${tool}`);
     setFiles([]);
     setDownloadUrl('');
@@ -411,7 +422,7 @@ function App() {
 
     // Rate Limiting Logic
     const today = new Date().toISOString().split('T')[0];
-    const userLimit = user ? 10 : 5; // Start with 5 for anonymous, 10 for logged-in
+    const userLimit = user ? 10 : 2; // Anonymous limit is 2, logged-in limit is 10
     const usageKey = `pdfquill_usage_${today}`;
     const currentUsage = parseInt(localStorage.getItem(usageKey) || '0', 10);
 
@@ -614,6 +625,11 @@ function App() {
                     onClick={() => selectTool(tool.id)}
                     className="group card cursor-pointer relative overflow-hidden"
                   >
+                    {tool.requiresUser && !user && (
+                      <div className="absolute top-4 right-4 text-slate-400 dark:text-slate-500 z-20">
+                        <Lock size={20} />
+                      </div>
+                    )}
                     <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-bl-[100px] -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-500"></div>
 
                     <div className="relative z-10">
@@ -854,6 +870,8 @@ function App() {
                   >
                   <ToolOptions
                     activeTool={activeTool}
+                    user={user}
+                    setError={setError}
                     splitMode={splitMode}
                     setSplitMode={setSplitMode}
                     pageRange={pageRange}
@@ -1129,6 +1147,8 @@ function App() {
 
 type ToolOptionsProps = {
   activeTool: Tool | null;
+  user: { email: string; token: string } | null;
+  setError: (msg: string) => void;
   splitMode: 'all' | 'range' | 'color';
   setSplitMode: (value: 'all' | 'range' | 'color') => void;
   pageRange: string;
@@ -1199,6 +1219,8 @@ function ToolOptions({
   setHtmlContent,
   pdfPassword,
   setPdfPassword,
+  user,
+  setError,
 }: ToolOptionsProps) {
   if (activeTool === 'split') {
     return (
@@ -1208,20 +1230,28 @@ function ToolOptions({
             {[
               { id: 'all', label: 'Every page' },
               { id: 'range', label: 'Specific range' },
-              { id: 'color', label: 'Color vs B&W' },
+              { id: 'color', label: 'Color vs B&W', requiresUser: true },
             ].map((option) => (
               <button
                 key={option.id}
                 type="button"
-                onClick={() => setSplitMode(option.id as 'all' | 'range' | 'color')}
+                onClick={() => {
+                  if (option.requiresUser && !user) {
+                    setError('The Color/Grayscale split feature requires an account. Please sign in with Google.');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    return;
+                  }
+                  setSplitMode(option.id as 'all' | 'range' | 'color');
+                }}
                 className={cn(
-                  'rounded-xl border-2 py-4 px-2 text-sm font-bold transition-all duration-200 text-center',
+                  'rounded-xl border-2 py-4 px-2 text-sm font-bold transition-all duration-200 text-center relative',
                   splitMode === option.id
                     ? 'border-primary bg-primary/5 text-primary shadow-inner'
                     : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-primary/30'
                 )}
               >
                 {option.label}
+                {option.requiresUser && !user && <Lock size={14} className="absolute top-2 right-2 text-slate-400" />}
               </button>
             ))}
           </div>
