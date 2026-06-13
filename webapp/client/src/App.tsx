@@ -662,7 +662,7 @@ function App() {
                     type="file"
                     className="hidden"
                     multiple={selectedTool.multiple}
-                    accept={selectedTool.acceptsImages ? '.png,.jpg,.jpeg' : '.pdf'}
+                    accept={selectedTool.acceptsImages ? '.png,.jpg,.jpeg' : activeTool === 'html-to-pdf' ? '.html,.htm' : '.pdf'}
                     onChange={handleFileChange}
                   />
                   <label
@@ -681,7 +681,7 @@ function App() {
                       <Upload size={32} />
                     </div>
                     <span className="text-xl font-bold text-slate-900 dark:text-white mb-2">
-                      {files.length > 0 ? `${files.length} files selected` : `Drop your ${selectedTool.acceptsImages ? 'images' : 'PDFs'} here`}
+                      {files.length > 0 ? `${files.length} files selected` : `Drop your ${selectedTool.acceptsImages ? 'images' : activeTool === 'html-to-pdf' ? 'HTML files' : 'PDFs'} here`}
                     </span>
                     <p className="text-slate-500 dark:text-slate-400 max-w-xs">
                       {selectedTool.multiple ? 'Click to browse or drag and drop multiple files' : 'Select a single file to begin processing'}
