@@ -14,13 +14,15 @@
     "clsx": "^2.1.1",
     "firebase": "^12.14.0",
     "framer-motion": "^12.40.0",
+    "jsqr": "^1.4.0",
     "jszip": "^3.10.1",
     "lucide-react": "^1.17.0",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.0.227",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "tailwind-merge": "^3.6.0"
+    "tailwind-merge": "^3.6.0",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
