@@ -25,13 +25,18 @@ import {
   ArrowLeft,
   Moon,
   Sun,
+  Globe,
+  FileMinus,
+  Lock,
+  Unlock,
   type LucideIcon,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { mergePdfs, splitPdf, compressPdf, rotatePdf, watermarkPdf, addPageNumbers, organizePdf, imagesToPdf, pdfToImages, compressImages, type ConversionResult } from './lib/pdfProcessing';
+import { mergePdfs, splitPdf, compressPdf, rotatePdf, watermarkPdf, addPageNumbers, organizePdf, imagesToPdf, pdfToImages, compressImages, flattenPdf, protectPdf, unlockPdf, type ConversionResult } from './lib/pdfProcessing';
 import { ocrMakeSearchable, ocrExtractText, OCR_LANGUAGES, type OcrProgress, type OcrTextResult } from './lib/ocrProcessing';
+import html2pdf from 'html2pdf.js';
 import { auth } from './lib/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
@@ -44,7 +49,7 @@ function cn(...inputs: ClassValue[]) {
 
 // const API_BASE = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? '/PDFQuill' : '/PDFQuill');
 
-type Tool = 'merge' | 'split' | 'compress' | 'rotate' | 'watermark' | 'page-numbers' | 'organize' | 'convert' | 'pdf-to-image' | 'compress-image' | 'ocr' | 'ocr-extract';
+type Tool = 'merge' | 'split' | 'compress' | 'rotate' | 'watermark' | 'page-numbers' | 'organize' | 'convert' | 'pdf-to-image' | 'compress-image' | 'ocr' | 'ocr-extract' | 'html-to-pdf' | 'flatten-pdf' | 'protect-pdf' | 'unlock-pdf';
 
 type ToolConfig = {
   id: Tool;
@@ -159,6 +164,38 @@ const tools: ToolConfig[] = [
     icon: 'manage_search',
     lucideIcon: FileSearch,
   },
+  {
+    id: 'html-to-pdf',
+    label: 'HTML to PDF',
+    description: 'Convert HTML files or rich text into a formatted PDF document.',
+    endpoint: '',
+    icon: 'language',
+    lucideIcon: Globe,
+  },
+  {
+    id: 'flatten-pdf',
+    label: 'Flatten PDF',
+    description: 'Convert all pages into uneditable images. Strips metadata and forms.',
+    endpoint: '',
+    icon: 'layers_clear',
+    lucideIcon: FileMinus,
+  },
+  {
+    id: 'protect-pdf',
+    label: 'Lock PDF',
+    description: 'Encrypt your PDF with a password. Requires password to open.',
+    endpoint: '',
+    icon: 'lock',
+    lucideIcon: Lock,
+  },
+  {
+    id: 'unlock-pdf',
+    label: 'Unlock PDF',
+    description: 'Remove password protection from an encrypted PDF.',
+    endpoint: '',
+    icon: 'lock_open',
+    lucideIcon: Unlock,
+  },
 ];
 
 type ViewType = 'main' | 'pricing' | 'solutions' | 'privacy' | 'terms' | 'login' | 'docs' | 'get-started';
@@ -251,6 +288,10 @@ function App() {
   const [ocrExtractTables, setOcrExtractTables] = useState(true);
   const [ocrProgress, setOcrProgress] = useState<OcrProgress | null>(null);
   const [ocrTextResult, setOcrTextResult] = useState<OcrTextResult | null>(null);
+
+  // HTML & Encryption state
+  const [htmlContent, setHtmlContent] = useState('');
+  const [pdfPassword, setPdfPassword] = useState('');
 
   // Thumbnail state
   const [thumbnails, setThumbnails] = useState<PageThumbnail[]>([]);
@@ -367,7 +408,7 @@ function App() {
   };
 
   const processFile = async () => {
-    if (files.length === 0) return;
+    if (files.length === 0 && !(activeTool === 'html-to-pdf' && htmlContent.trim().length > 0)) return;
     if (activeTool === 'watermark' && watermarkMode === 'image' && !watermarkImage) {
       setError('Choose a watermark image first.');
       return;
@@ -413,6 +454,26 @@ function App() {
         setOcrTextResult(textResult);
         // No download URL for extract — we show the text inline
         resultUrl = '';
+      } else if (activeTool === 'flatten-pdf') {
+        resultUrl = await flattenPdf(files[0]);
+      } else if (activeTool === 'protect-pdf') {
+        if (!pdfPassword) throw new Error('Password is required to lock the PDF.');
+        resultUrl = await protectPdf(files[0], pdfPassword);
+      } else if (activeTool === 'unlock-pdf') {
+        if (!pdfPassword) throw new Error('Password is required to unlock the PDF.');
+        resultUrl = await unlockPdf(files[0], pdfPassword);
+      } else if (activeTool === 'html-to-pdf') {
+        let content = htmlContent;
+        if (files.length > 0) {
+          content = await files[0].text();
+        }
+        if (!content.trim()) throw new Error('Please enter some HTML or upload an HTML file.');
+        
+        const element = document.createElement('div');
+        element.innerHTML = content;
+        
+        const blob = await html2pdf().from(element).output('blob');
+        resultUrl = URL.createObjectURL(blob);
       }
       
       if (Array.isArray(resultUrl)) {
@@ -432,7 +493,7 @@ function App() {
   };
 
   const needsPageRange = activeTool === 'organize' || (activeTool === 'split' && splitMode === 'range') || (activeTool === 'rotate' && rotationMode === 'specific');
-  const canProcess = files.length > 0 && !loading && (!needsPageRange || pageRange.trim().length > 0 || rotationPages.trim().length > 0);
+  const canProcess = !loading && (!needsPageRange || pageRange.trim().length > 0 || rotationPages.trim().length > 0) && (files.length > 0 || (activeTool === 'html-to-pdf' && htmlContent.trim().length > 0));
 
   return (
     <div className="min-h-screen selection:bg-primary/20 selection:text-primary">
@@ -629,7 +690,7 @@ function App() {
                 </motion.div>
 
                 {files.length > 0 && (
-                  <motion.div
+                <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="card p-6"
@@ -808,6 +869,10 @@ function App() {
                     setOcrDetectQr={setOcrDetectQr}
                     ocrExtractTables={ocrExtractTables}
                     setOcrExtractTables={setOcrExtractTables}
+                    htmlContent={htmlContent}
+                    setHtmlContent={setHtmlContent}
+                    pdfPassword={pdfPassword}
+                    setPdfPassword={setPdfPassword}
                   />
 
                   <button
@@ -1079,6 +1144,10 @@ type ToolOptionsProps = {
   setOcrDetectQr: (value: boolean) => void;
   ocrExtractTables: boolean;
   setOcrExtractTables: (value: boolean) => void;
+  htmlContent: string;
+  setHtmlContent: (value: string) => void;
+  pdfPassword: string;
+  setPdfPassword: (value: string) => void;
 };
 
 function ToolOptions({
@@ -1112,6 +1181,10 @@ function ToolOptions({
   setOcrDetectQr,
   ocrExtractTables,
   setOcrExtractTables,
+  htmlContent,
+  setHtmlContent,
+  pdfPassword,
+  setPdfPassword,
 }: ToolOptionsProps) {
   if (activeTool === 'split') {
     return (
@@ -1403,6 +1476,37 @@ function ToolOptions({
             🔒 100% private — all processing happens in your browser.
           </p>
         </div>
+      </div>
+    );
+  }
+
+  if (activeTool === 'html-to-pdf') {
+    return (
+      <div className="grid gap-6">
+        <Field label="HTML Content">
+          <textarea
+            value={htmlContent}
+            onChange={(e) => setHtmlContent(e.target.value)}
+            placeholder="Type or paste your HTML here... OR upload an .html file above."
+            className="input-control font-mono text-sm min-h-[200px]"
+          />
+        </Field>
+      </div>
+    );
+  }
+
+  if (activeTool === 'protect-pdf' || activeTool === 'unlock-pdf') {
+    return (
+      <div className="grid gap-6">
+        <Field label="PDF Password">
+          <input
+            type="password"
+            value={pdfPassword}
+            onChange={(e) => setPdfPassword(e.target.value)}
+            placeholder={activeTool === 'protect-pdf' ? 'Enter a strong password to lock...' : 'Enter the password to unlock...'}
+            className="input-control"
+          />
+        </Field>
       </div>
     );
   }
