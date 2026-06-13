@@ -5,8 +5,10 @@ import {
   CheckCircle,
   ChevronUp,
   ChevronDown,
+  Copy,
   Download,
   FileImage,
+  FileSearch,
   FileText,
   Hash,
   Image,
@@ -15,6 +17,7 @@ import {
   Merge,
   Minimize2,
   RotateCw,
+  ScanText,
   Scissors,
   Trash2,
   Type,
@@ -28,6 +31,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { mergePdfs, splitPdf, compressPdf, rotatePdf, watermarkPdf, addPageNumbers, organizePdf, imagesToPdf, pdfToImages, compressImages, type ConversionResult } from './lib/pdfProcessing';
+import { ocrMakeSearchable, ocrExtractText, OCR_LANGUAGES, type OcrProgress, type OcrTextResult } from './lib/ocrProcessing';
 import { auth } from './lib/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseError } from 'firebase/app';
@@ -40,7 +44,7 @@ function cn(...inputs: ClassValue[]) {
 
 // const API_BASE = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? '/PDFQuill' : '/PDFQuill');
 
-type Tool = 'merge' | 'split' | 'compress' | 'rotate' | 'watermark' | 'page-numbers' | 'organize' | 'convert' | 'pdf-to-image' | 'compress-image';
+type Tool = 'merge' | 'split' | 'compress' | 'rotate' | 'watermark' | 'page-numbers' | 'organize' | 'convert' | 'pdf-to-image' | 'compress-image' | 'ocr' | 'ocr-extract';
 
 type ToolConfig = {
   id: Tool;
@@ -139,6 +143,22 @@ const tools: ToolConfig[] = [
     acceptsImages: true,
     multiple: true,
   },
+  {
+    id: 'ocr',
+    label: 'OCR — Make Searchable',
+    description: 'Convert scanned documents into searchable, selectable PDFs using AI-powered text recognition.',
+    endpoint: '',
+    icon: 'document_scanner',
+    lucideIcon: ScanText,
+  },
+  {
+    id: 'ocr-extract',
+    label: 'OCR — Extract Text',
+    description: 'Extract all text from scanned or image-based PDFs with confidence scoring.',
+    endpoint: '',
+    icon: 'manage_search',
+    lucideIcon: FileSearch,
+  },
 ];
 
 type ViewType = 'main' | 'pricing' | 'solutions' | 'privacy' | 'terms' | 'login' | 'docs' | 'get-started';
@@ -224,6 +244,14 @@ function App() {
   const [imageScale, setImageScale] = useState(1.0);
   const [downloadExtension, setDownloadExtension] = useState('pdf');
 
+  // OCR state
+  const [ocrLanguage, setOcrLanguage] = useState('eng');
+  const [ocrAutoRotate, setOcrAutoRotate] = useState(true);
+  const [ocrDetectQr, setOcrDetectQr] = useState(true);
+  const [ocrExtractTables, setOcrExtractTables] = useState(true);
+  const [ocrProgress, setOcrProgress] = useState<OcrProgress | null>(null);
+  const [ocrTextResult, setOcrTextResult] = useState<OcrTextResult | null>(null);
+
   // Thumbnail state
   const [thumbnails, setThumbnails] = useState<PageThumbnail[]>([]);
   const [loadingThumbnails, setLoadingThumbnails] = useState(false);
@@ -271,6 +299,8 @@ function App() {
     setError('');
     setWatermarkImage(null);
     setThumbnails([]);
+    setOcrProgress(null);
+    setOcrTextResult(null);
   };
 
   const goHome = () => {
@@ -346,6 +376,8 @@ function App() {
     setLoading(true);
     setError('');
     setDownloadUrl('');
+    setOcrProgress(null);
+    setOcrTextResult(null);
     setDownloadUrls([]);
 
     try {
@@ -374,6 +406,13 @@ function App() {
         const result: ConversionResult = await compressImages(files, imageQuality, imageScale);
         resultUrl = result.url;
         setDownloadExtension(result.extension);
+      } else if (activeTool === 'ocr') {
+        resultUrl = await ocrMakeSearchable(files[0], { language: ocrLanguage, autoRotate: ocrAutoRotate, detectQr: ocrDetectQr, extractTables: ocrExtractTables }, setOcrProgress);
+      } else if (activeTool === 'ocr-extract') {
+        const textResult = await ocrExtractText(files[0], { language: ocrLanguage, autoRotate: ocrAutoRotate, detectQr: ocrDetectQr, extractTables: ocrExtractTables }, setOcrProgress);
+        setOcrTextResult(textResult);
+        // No download URL for extract — we show the text inline
+        resultUrl = '';
       }
       
       if (Array.isArray(resultUrl)) {
@@ -761,6 +800,14 @@ function App() {
                     setImageQuality={setImageQuality}
                     imageScale={imageScale}
                     setImageScale={setImageScale}
+                    ocrLanguage={ocrLanguage}
+                    setOcrLanguage={setOcrLanguage}
+                    ocrAutoRotate={ocrAutoRotate}
+                    setOcrAutoRotate={setOcrAutoRotate}
+                    ocrDetectQr={ocrDetectQr}
+                    setOcrDetectQr={setOcrDetectQr}
+                    ocrExtractTables={ocrExtractTables}
+                    setOcrExtractTables={setOcrExtractTables}
                   />
 
                   <button
@@ -775,6 +822,35 @@ function App() {
                     {loading ? <Loader2 className="animate-spin mr-2" size={24} /> : <selectedTool.lucideIcon className="mr-2" size={24} />}
                     {loading ? 'Processing...' : `Start ${selectedTool.label}`}
                   </button>
+
+                  {/* OCR Progress Display */}
+                  {loading && ocrProgress && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-6 rounded-2xl border border-blue-100 dark:border-blue-900/30 bg-blue-50 dark:bg-blue-900/10 p-6"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-black uppercase tracking-widest text-blue-500 dark:text-blue-400">
+                          {ocrProgress.phase === 'rendering' && '📄 Rendering page'}
+                          {ocrProgress.phase === 'recognizing' && '🔍 Recognizing text'}
+                          {ocrProgress.phase === 'building' && '🏗️ Building PDF'}
+                        </span>
+                        <span className="text-sm font-bold text-blue-600 dark:text-blue-300">
+                          Page {ocrProgress.currentPage} of {ocrProgress.totalPages}
+                        </span>
+                      </div>
+                      <div className="w-full bg-blue-100 dark:bg-blue-900/30 rounded-full h-3 overflow-hidden">
+                        <motion.div
+                          className="h-full bg-gradient-to-r from-blue-500 to-primary rounded-full"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${ocrProgress.percent}%` }}
+                          transition={{ duration: 0.3, ease: 'easeOut' }}
+                        />
+                      </div>
+                      <p className="mt-2 text-xs font-medium text-blue-500 dark:text-blue-400 text-right">{ocrProgress.percent}%</p>
+                    </motion.div>
+                  )}
                 </motion.div>
 
                 <AnimatePresence>
@@ -840,6 +916,104 @@ function App() {
                       ))}
                     </motion.div>
                   )}
+
+                  {/* OCR Extracted Text Results */}
+                  {ocrTextResult && activeTool === 'ocr-extract' && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      className="flex flex-col gap-4 rounded-2xl border border-violet-100 dark:border-violet-900/30 bg-violet-50 dark:bg-violet-900/10 p-6 shadow-xl shadow-violet-500/10"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-600 dark:text-violet-400">
+                            <FileSearch size={20} />
+                          </div>
+                          <div>
+                            <h3 className="font-display text-lg font-extrabold text-slate-900 dark:text-white">Text Extracted</h3>
+                            <p className="text-xs font-medium text-violet-500">
+                              {ocrTextResult.pages.length} page{ocrTextResult.pages.length !== 1 ? 's' : ''} · Avg. confidence: {ocrTextResult.confidence}%
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(ocrTextResult.text);
+                          }}
+                          className="btn btn-secondary flex items-center gap-2 text-sm"
+                          title="Copy to clipboard"
+                        >
+                          <Copy size={16} /> Copy
+                        </button>
+                      </div>
+
+                      {/* Confidence badges per page */}
+                      <div className="flex flex-wrap gap-2">
+                        {ocrTextResult.pages.map((page) => (
+                          <span
+                            key={page.pageNumber}
+                            className={cn(
+                              'inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold',
+                              page.confidence >= 90
+                                ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                                : page.confidence >= 70
+                                  ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                                  : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                            )}
+                          >
+                            P{page.pageNumber}: {page.confidence}%
+                          </span>
+                        ))}
+                      </div>
+
+                      {/* Text preview */}
+                      <div className="max-h-80 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4">
+                        <pre className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-mono leading-relaxed">
+                          {ocrTextResult.text}
+                        </pre>
+                      </div>
+
+                      {/* QR Codes */}
+                      {ocrTextResult.qrs && ocrTextResult.qrs.length > 0 && (
+                        <div className="mt-2 space-y-2">
+                          <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">Detected QR Codes:</h4>
+                          {ocrTextResult.qrs.map((qr, idx) => (
+                            <div key={idx} className="flex items-center justify-between bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
+                              <span className="text-sm font-mono text-slate-600 dark:text-slate-400 break-all">{qr}</span>
+                              <button
+                                onClick={() => navigator.clipboard.writeText(qr)}
+                                className="btn btn-secondary text-xs px-3 py-1"
+                              >
+                                Copy
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Downloads */}
+                      <div className="flex flex-col sm:flex-row gap-3 mt-2">
+                        <a
+                          href={URL.createObjectURL(new Blob([ocrTextResult.text], { type: 'text/plain' }))}
+                          download="PDFQuill_extracted_text.txt"
+                          className="flex-1 btn bg-violet-600 text-white hover:bg-violet-700 px-6 py-3 text-sm shadow-lg shadow-violet-600/20 flex items-center justify-center gap-2"
+                        >
+                          <Download size={18} /> Download as .txt
+                        </a>
+                        
+                        {ocrTextResult.csv && (
+                          <a
+                            href={URL.createObjectURL(new Blob([ocrTextResult.csv], { type: 'text/csv' }))}
+                            download="PDFQuill_extracted_tables.csv"
+                            className="flex-1 btn bg-emerald-600 text-white hover:bg-emerald-700 px-6 py-3 text-sm shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2"
+                          >
+                            <Download size={18} /> Download Tables as .csv
+                          </a>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
                 </AnimatePresence>
                 </aside>
               </div>
@@ -897,6 +1071,14 @@ type ToolOptionsProps = {
   setImageQuality: (value: number) => void;
   imageScale: number;
   setImageScale: (value: number) => void;
+  ocrLanguage: string;
+  setOcrLanguage: (value: string) => void;
+  ocrAutoRotate: boolean;
+  setOcrAutoRotate: (value: boolean) => void;
+  ocrDetectQr: boolean;
+  setOcrDetectQr: (value: boolean) => void;
+  ocrExtractTables: boolean;
+  setOcrExtractTables: (value: boolean) => void;
 };
 
 function ToolOptions({
@@ -922,6 +1104,14 @@ function ToolOptions({
   setImageQuality,
   imageScale,
   setImageScale,
+  ocrLanguage,
+  setOcrLanguage,
+  ocrAutoRotate,
+  setOcrAutoRotate,
+  ocrDetectQr,
+  setOcrDetectQr,
+  ocrExtractTables,
+  setOcrExtractTables,
 }: ToolOptionsProps) {
   if (activeTool === 'split') {
     return (
@@ -1124,6 +1314,95 @@ function ToolOptions({
             <span>Original</span>
           </div>
         </Field>
+      </div>
+    );
+  }
+
+  if (activeTool === 'ocr' || activeTool === 'ocr-extract') {
+    return (
+      <div className="grid gap-6">
+        <Field label="OCR Language">
+          <select
+            value={ocrLanguage}
+            onChange={(e) => setOcrLanguage(e.target.value)}
+            className="input-control"
+          >
+            {OCR_LANGUAGES.map((lang) => (
+              <option key={lang.code} value={lang.code}>
+                {lang.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <label className="flex items-start gap-3 cursor-pointer group">
+            <div className="relative flex items-start">
+              <input 
+                type="checkbox" 
+                checked={ocrAutoRotate}
+                onChange={(e) => setOcrAutoRotate(e.target.checked)}
+                className="peer sr-only"
+              />
+              <div className="w-5 h-5 border-2 border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 peer-checked:bg-primary peer-checked:border-primary transition-colors flex items-center justify-center">
+                <CheckCircle size={14} className="text-white opacity-0 peer-checked:opacity-100 transition-opacity" strokeWidth={3} />
+              </div>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">Auto-Rotate Pages</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Fixes upside-down scans</span>
+            </div>
+          </label>
+
+          <label className="flex items-start gap-3 cursor-pointer group">
+            <div className="relative flex items-start">
+              <input 
+                type="checkbox" 
+                checked={ocrDetectQr}
+                onChange={(e) => setOcrDetectQr(e.target.checked)}
+                className="peer sr-only"
+              />
+              <div className="w-5 h-5 border-2 border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 peer-checked:bg-primary peer-checked:border-primary transition-colors flex items-center justify-center">
+                <CheckCircle size={14} className="text-white opacity-0 peer-checked:opacity-100 transition-opacity" strokeWidth={3} />
+              </div>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">Detect QR Codes</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Extract links from documents</span>
+            </div>
+          </label>
+
+          {activeTool === 'ocr-extract' && (
+            <label className="flex items-start gap-3 cursor-pointer group col-span-full sm:col-span-1">
+              <div className="relative flex items-start">
+                <input 
+                  type="checkbox" 
+                  checked={ocrExtractTables}
+                  onChange={(e) => setOcrExtractTables(e.target.checked)}
+                  className="peer sr-only"
+                />
+                <div className="w-5 h-5 border-2 border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-900 peer-checked:bg-primary peer-checked:border-primary transition-colors flex items-center justify-center">
+                  <CheckCircle size={14} className="text-white opacity-0 peer-checked:opacity-100 transition-opacity" strokeWidth={3} />
+                </div>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors">Extract Tables (CSV)</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Groups data into rows/columns</span>
+              </div>
+            </label>
+          )}
+        </div>
+
+        <div className="rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 p-4">
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 leading-relaxed">
+            {activeTool === 'ocr'
+              ? '🔍 Scans each page for text and creates an invisible searchable layer. The visual appearance of your PDF remains unchanged.'
+              : '📝 Extracts all recognized text with per-page confidence scores. Great for copying text from scanned documents.'}
+          </p>
+          <p className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-2">
+            🔒 100% private — all processing happens in your browser.
+          </p>
+        </div>
       </div>
     );
   }
