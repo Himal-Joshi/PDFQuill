@@ -7,8 +7,26 @@ const multer = require('multer');
 const path = require('path');
 const { randomUUID } = require('crypto');
 const { PDFDocument, StandardFonts, degrees, rgb } = require('pdf-lib');
+const admin = require('firebase-admin');
+const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
 
 const app = express();
+
+// Initialize Firebase Admin
+if (!admin.apps.length) {
+  try {
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      admin.initializeApp({
+        credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT))
+      });
+    } else {
+      admin.initializeApp({ credential: admin.credential.applicationDefault() });
+    }
+  } catch (err) {
+    console.warn('Firebase Admin init warning:', err.message);
+  }
+}
 const port = Number(process.env.PORT || 3001);
 
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -18,8 +36,68 @@ for (const dir of [uploadsDir, outputsDir]) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
-app.use(cors());
+// Background Cleanup: Delete outputs older than 1 hour every 15 minutes
+setInterval(async () => {
+  try {
+    const files = await fsp.readdir(outputsDir);
+    const now = Date.now();
+    for (const file of files) {
+      const filePath = path.join(outputsDir, file);
+      const stats = await fsp.stat(filePath);
+      if (now - stats.mtimeMs > 60 * 60 * 1000) { // 1 hour
+        await fsp.rm(filePath, { force: true, recursive: true });
+      }
+    }
+  } catch (err) {
+    console.error('Cleanup error:', err.message);
+  }
+}, 15 * 60 * 1000);
+
+app.use(helmet());
+
+const allowedOrigins = ['https://himal-joshi.github.io', 'https://pdfquill.vercel.app', 'https://pdfquill.com.np', 'http://localhost:5173'];
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
+}));
 app.use(express.json());
+
+// Auth Middleware
+async function authMiddleware(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split('Bearer ')[1];
+    try {
+      const decodedToken = await admin.auth().verifyIdToken(token);
+      req.user = decodedToken;
+    } catch (error) {
+      console.warn('Invalid token:', error.message);
+    }
+  }
+  next();
+}
+
+// Rate Limiter
+const apiLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000, // 24 hrs
+  max: (req, res) => {
+    if (req.user) return 10;
+    return 5;
+  },
+  keyGenerator: (req) => {
+    return req.user ? req.user.uid : req.ip;
+  },
+  message: { error: 'Daily processing limit exceeded. Please try again tomorrow or login to increase your limit.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api', authMiddleware, apiLimiter);
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -397,14 +475,20 @@ app.use((_req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
+  console.error('Error:', err.message);
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({ error: 'File too large (max 50MB).' });
     }
-    return res.status(400).json({ error: err.message });
+    return res.status(400).json({ error: 'Upload error.' });
   }
-  res.status(err.status || 500).json({ error: err.message || 'Internal server error.' });
+  
+  if (err.message === 'Not allowed by CORS') {
+    return res.status(403).json({ error: 'CORS error: Origin not allowed.' });
+  }
+
+  const isDev = process.env.NODE_ENV === 'development';
+  res.status(err.status || 500).json({ error: isDev ? err.message : 'Internal server error.' });
 });
 
 app.listen(port, () => {
