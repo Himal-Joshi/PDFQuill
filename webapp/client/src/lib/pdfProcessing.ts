@@ -1,9 +1,15 @@
 import { PDFDocument, StandardFonts, degrees, rgb } from 'pdf-lib';
 import JSZip from 'jszip';
 import * as pdfjsLib from 'pdfjs-dist';
+import { createBrowserQpdfRunner } from 'qpdf-run';
 
 // Ensure worker is configured for pdfjs-dist
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+
+async function fileToUint8Array(file: File): Promise<Uint8Array> {
+  const arrayBuffer = await file.arrayBuffer();
+  return new Uint8Array(arrayBuffer);
+}
 
 function parsePageList(value: string, totalPages: number): number[] {
   if (!value || !value.trim()) {
@@ -423,4 +429,75 @@ export async function compressImages(
   const zipBlob = await zip.generateAsync({ type: 'blob' });
   if (onProgress) onProgress(100);
   return { url: URL.createObjectURL(zipBlob), extension: 'zip' };
+}
+
+
+export async function flattenPdf(file: File, onProgress?: (p: number) => void): Promise<string> {
+  const bytes = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+  const totalPages = pdf.numPages;
+  const outDoc = await PDFDocument.create();
+  
+  for (let i = 1; i <= totalPages; i++) {
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale: 2.0 }); // 2x scale
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not create canvas context');
+    
+    await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+    
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((b) => b ? resolve(b) : reject(new Error('Canvas error')), 'image/png');
+    });
+    
+    const pngBytes = await blob.arrayBuffer();
+    const pngImage = await outDoc.embedPng(pngBytes);
+    const outPage = outDoc.addPage([viewport.width, viewport.height]);
+    outPage.drawImage(pngImage, {
+      x: 0,
+      y: 0,
+      width: viewport.width,
+      height: viewport.height,
+    });
+    
+    if (onProgress) onProgress(Math.round((i / totalPages) * 90));
+  }
+  
+  const pdfBytes = await outDoc.save();
+  if (onProgress) onProgress(100);
+  const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: 'application/pdf' });
+  return URL.createObjectURL(blob);
+}
+
+export async function protectPdf(file: File, password: string): Promise<string> {
+  const runner = await createBrowserQpdfRunner();
+  try {
+    const inputBytes = await fileToUint8Array(file);
+    const result = await runner.runOne({
+      input: inputBytes,
+      args: ['--encrypt', password, password, '256', '--'],
+    });
+    const blob = new Blob([result.buffer as ArrayBuffer], { type: 'application/pdf' });
+    return URL.createObjectURL(blob);
+  } finally {
+    await runner.destroy();
+  }
+}
+
+export async function unlockPdf(file: File, password: string): Promise<string> {
+  const runner = await createBrowserQpdfRunner();
+  try {
+    const inputBytes = await fileToUint8Array(file);
+    const result = await runner.runOne({
+      input: inputBytes,
+      args: ['--password=' + password, '--decrypt'],
+    });
+    const blob = new Blob([result.buffer as ArrayBuffer], { type: 'application/pdf' });
+    return URL.createObjectURL(blob);
+  } finally {
+    await runner.destroy();
+  }
 }
