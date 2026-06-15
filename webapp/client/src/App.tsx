@@ -37,6 +37,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { mergePdfs, splitPdf, compressPdf, rotatePdf, watermarkPdf, addPageNumbers, organizePdf, imagesToPdf, pdfToImages, compressImages, flattenPdf, protectPdf, unlockPdf, type ConversionResult } from './lib/pdfProcessing';
+import { removeBackground } from './lib/imageProcessing';
 import { ocrMakeSearchable, ocrExtractText, OCR_LANGUAGES, type OcrProgress, type OcrTextResult } from './lib/ocrProcessing';
 import html2pdf from 'html2pdf.js';
 import { auth, googleProvider } from './lib/firebase';
@@ -50,7 +51,7 @@ function cn(...inputs: ClassValue[]) {
 
 // const API_BASE = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? '/PDFQuill' : '/PDFQuill');
 
-type Tool = 'merge' | 'split' | 'compress' | 'rotate' | 'watermark' | 'page-numbers' | 'organize' | 'convert' | 'pdf-to-image' | 'compress-image' | 'ocr' | 'ocr-extract' | 'html-to-pdf' | 'flatten-pdf' | 'protect-pdf' | 'unlock-pdf';
+type Tool = 'merge' | 'split' | 'compress' | 'rotate' | 'watermark' | 'page-numbers' | 'organize' | 'convert' | 'pdf-to-image' | 'compress-image' | 'remove-bg' | 'ocr' | 'ocr-extract' | 'html-to-pdf' | 'flatten-pdf' | 'protect-pdf' | 'unlock-pdf';
 
 type ToolConfig = {
   id: Tool;
@@ -148,6 +149,16 @@ const tools: ToolConfig[] = [
     endpoint: '',
     icon: 'compress',
     lucideIcon: Minimize2,
+    acceptsImages: true,
+    multiple: true,
+  },
+  {
+    id: 'remove-bg',
+    label: 'Background Remover',
+    description: 'Remove backgrounds instantly with AI. Get clean, high-quality transparent PNGs.',
+    endpoint: '',
+    icon: 'auto_fix_high',
+    lucideIcon: Scissors,
     acceptsImages: true,
     multiple: true,
   },
@@ -362,7 +373,7 @@ function App() {
 
   // Generate thumbnails when files change (for single-file PDF tools)
   useEffect(() => {
-    if (files.length === 0 || activeTool === 'convert' || activeTool === 'compress-image') {
+    if (files.length === 0 || activeTool === 'convert' || activeTool === 'compress-image' || activeTool === 'remove-bg') {
       Promise.resolve().then(() => setThumbnails([]));
       return;
     }
@@ -469,6 +480,10 @@ function App() {
         setDownloadExtension(result.extension);
       } else if (activeTool === 'compress-image') {
         const result: ConversionResult = await compressImages(files, imageQuality, imageScale);
+        resultUrl = result.url;
+        setDownloadExtension(result.extension);
+      } else if (activeTool === 'remove-bg') {
+        const result: ConversionResult = await removeBackground(files, setProgress);
         resultUrl = result.url;
         setDownloadExtension(result.extension);
       } else if (activeTool === 'ocr') {
@@ -812,7 +827,7 @@ function App() {
                 )}
 
                 {/* Page Thumbnails Grid */}
-                {files.length > 0 && activeTool !== 'merge' && activeTool !== 'convert' && activeTool !== 'compress-image' && (
+                {files.length > 0 && activeTool !== 'merge' && activeTool !== 'convert' && activeTool !== 'compress-image' && activeTool !== 'remove-bg' && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -985,7 +1000,7 @@ function App() {
                       </div>
                       <a
                         href={downloadUrl}
-                        download={`PDFQuill_${activeTool}${activeTool === 'split' && splitMode === 'all' ? '.zip' : (activeTool === 'pdf-to-image' || activeTool === 'compress-image') ? `.${downloadExtension}` : '.pdf'}`}
+                        download={`PDFQuill_${activeTool}${activeTool === 'split' && splitMode === 'all' ? '.zip' : (activeTool === 'pdf-to-image' || activeTool === 'compress-image' || activeTool === 'remove-bg') ? `.${downloadExtension}` : '.pdf'}`}
                         className="btn bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-4 text-lg shadow-lg shadow-emerald-600/20"
                       >
                         <Download size={20} className="mr-2" />
@@ -1433,6 +1448,24 @@ function ToolOptions({
             <span>Original</span>
           </div>
         </Field>
+      </div>
+    );
+  }
+
+  if (activeTool === 'remove-bg') {
+    return (
+      <div className="grid gap-4">
+        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+          AI-powered background removal runs entirely on your device. Your images are never uploaded to any server.
+        </p>
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
+          <Lock size={14} className="text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+          <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">100% Private — Processed Locally</span>
+        </div>
+        <div className="text-xs text-slate-400 dark:text-slate-500">
+          <p className="mb-1">⚡ First run downloads a ~40 MB AI model (cached automatically).</p>
+          <p>🎯 Best results with clear subjects and distinct backgrounds.</p>
+        </div>
       </div>
     );
   }

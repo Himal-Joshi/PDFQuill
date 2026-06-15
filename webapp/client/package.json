@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@imgly/background-removal": "^1.7.0",
     "axios": "^1.17.0",
     "clsx": "^2.1.1",
     "firebase": "^12.14.0",
