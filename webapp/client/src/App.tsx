@@ -37,7 +37,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { mergePdfs, splitPdf, compressPdf, rotatePdf, watermarkPdf, addPageNumbers, organizePdf, imagesToPdf, pdfToImages, compressImages, flattenPdf, protectPdf, unlockPdf, type ConversionResult } from './lib/pdfProcessing';
-import { removeBackground } from './lib/imageProcessing';
+import { removeBackground, type ImageRemovalPreview, type ImageRemovalResult } from './lib/imageProcessing';
 import { ocrMakeSearchable, ocrExtractText, OCR_LANGUAGES, type OcrProgress, type OcrTextResult } from './lib/ocrProcessing';
 import html2pdf from 'html2pdf.js';
 import { auth, googleProvider } from './lib/firebase';
@@ -306,6 +306,7 @@ function App() {
   const [ocrProgress, setOcrProgress] = useState<OcrProgress | null>(null);
   const [ocrTextResult, setOcrTextResult] = useState<OcrTextResult | null>(null);
   const [bgProgress, setBgProgress] = useState<number | null>(null);
+  const [processedPreviews, setProcessedPreviews] = useState<ImageRemovalPreview[]>([]);
 
   // HTML & Encryption state
   const [htmlContent, setHtmlContent] = useState('');
@@ -367,6 +368,7 @@ function App() {
     setOcrProgress(null);
     setOcrTextResult(null);
     setBgProgress(null);
+    setProcessedPreviews([]);
   };
 
   const goHome = () => {
@@ -393,6 +395,16 @@ function App() {
       Promise.resolve().then(() => setThumbnails([]));
     }
   }, [files, activeTool]);
+
+  // Clean up object URLs created during background removal to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      processedPreviews.forEach((item) => {
+        URL.revokeObjectURL(item.originalUrl);
+        URL.revokeObjectURL(item.processedUrl);
+      });
+    };
+  }, [processedPreviews]);
 
   // Reorder helpers for merge
   const moveFileUp = useCallback((index: number) => {
@@ -457,6 +469,7 @@ function App() {
     setOcrProgress(null);
     setOcrTextResult(null);
     setBgProgress(null);
+    setProcessedPreviews([]);
     setDownloadUrls([]);
 
     try {
@@ -486,9 +499,10 @@ function App() {
         resultUrl = result.url;
         setDownloadExtension(result.extension);
       } else if (activeTool === 'remove-bg') {
-        const result: ConversionResult = await removeBackground(files, setBgProgress);
+        const result: ImageRemovalResult = await removeBackground(files, setBgProgress);
         resultUrl = result.url;
         setDownloadExtension(result.extension);
+        setProcessedPreviews(result.previews);
       } else if (activeTool === 'ocr') {
         resultUrl = await ocrMakeSearchable(files[0], { language: ocrLanguage, autoRotate: ocrAutoRotate, detectQr: ocrDetectQr, extractTables: ocrExtractTables }, setOcrProgress);
       } else if (activeTool === 'ocr-extract') {
@@ -1008,6 +1022,49 @@ function App() {
                         <AlertCircle size={20} />
                       </div>
                       <p className="text-sm font-bold">{error}</p>
+                    </motion.div>
+                  )}
+
+                  {activeTool === 'remove-bg' && processedPreviews.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="card p-6 mb-6 overflow-hidden border border-slate-200 dark:border-slate-800"
+                    >
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-6">
+                        Background Removal Preview
+                      </h3>
+                      <div className="grid gap-8">
+                        {processedPreviews.map((preview, index) => (
+                          <div key={index} className="flex flex-col gap-4 border-b border-slate-100 dark:border-slate-800 last:border-b-0 pb-6 last:pb-0">
+                            {processedPreviews.length > 1 && (
+                              <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{preview.name}</span>
+                            )}
+                            <div className="grid sm:grid-cols-2 gap-6">
+                              <div className="flex flex-col gap-2">
+                                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Original</span>
+                                <div className="h-64 sm:h-80 w-full bg-slate-50 dark:bg-slate-950 rounded-xl overflow-hidden flex items-center justify-center p-4 border border-slate-200 dark:border-slate-800">
+                                  <img src={preview.originalUrl} alt="Original" className="max-w-full max-h-full object-contain rounded" />
+                                </div>
+                              </div>
+                              <div className="flex flex-col gap-2">
+                                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Background Removed</span>
+                                <div 
+                                  className="h-64 sm:h-80 w-full rounded-xl overflow-hidden flex items-center justify-center p-4 border border-slate-200 dark:border-slate-800"
+                                  style={{ 
+                                    backgroundImage: isDarkMode
+                                      ? 'conic-gradient(#1e293b 25%, #0f172a 0 50%, #1e293b 0 75%, #0f172a 0)'
+                                      : 'conic-gradient(#f1f5f9 25%, #e2e8f0 0 50%, #f1f5f9 0 75%, #e2e8f0 0)', 
+                                    backgroundSize: '20px 20px' 
+                                  }}
+                                >
+                                  <img src={preview.processedUrl} alt="Background Removed" className="max-w-full max-h-full object-contain drop-shadow-lg" />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </motion.div>
                   )}
 
