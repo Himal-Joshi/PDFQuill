@@ -29,6 +29,8 @@ import {
   FileMinus,
   Lock,
   Unlock,
+  PlayCircle,
+  X,
   type LucideIcon,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -1769,6 +1771,8 @@ function DocsView() {
 }
 
 function GetStartedView() {
+  const [activeTutorial, setActiveTutorial] = useState<{title: string, desc: string, videoUrl: string} | null>(null);
+
   return (
     <div className="text-center">
       <h2 className="text-4xl md:text-5xl font-display font-extrabold mb-8 text-slate-900 dark:text-white">Start Building with PDFQuill</h2>
@@ -1785,6 +1789,68 @@ function GetStartedView() {
           <a href="https://github.com/Himal-Joshi/PDFQuill" target="_blank" rel="noopener noreferrer" className="btn btn-secondary w-full py-4 inline-block text-center">Contact Sales</a>
         </div>
       </div>
+
+      <div className="mt-20 max-w-5xl mx-auto">
+        <h3 className="text-3xl font-display font-bold mb-10 text-slate-900 dark:text-white text-center">Master the Basics</h3>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            { title: 'Compress PDF', desc: 'Reduce file size quickly', color: 'from-blue-500 to-cyan-400', videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4' },
+            { title: 'Organize Pages', desc: 'Reorder and delete pages', color: 'from-purple-500 to-pink-500', videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4' },
+            { title: 'Merge Documents', desc: 'Combine multiple PDFs', color: 'from-emerald-400 to-teal-500', videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4' },
+            { title: 'Color & B/W Split', desc: 'Separate color pages', color: 'from-orange-400 to-amber-500', videoUrl: 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4' }
+          ].map((tutorial, idx) => (
+            <div key={idx} onClick={() => setActiveTutorial(tutorial)} className="card overflow-hidden group cursor-pointer hover:-translate-y-1 transition-transform duration-300">
+              <div className={`h-32 bg-gradient-to-br ${tutorial.color} relative flex items-center justify-center`}>
+                <div className="absolute inset-0 bg-black/10 group-hover:bg-black/0 transition-colors" />
+                <PlayCircle className="w-12 h-12 text-white opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all drop-shadow-md" />
+              </div>
+              <div className="p-5 bg-white dark:bg-slate-800">
+                <h4 className="font-bold text-slate-900 dark:text-white mb-1">{tutorial.title}</h4>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{tutorial.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {activeTutorial && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm"
+            onClick={() => setActiveTutorial(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden max-w-4xl w-full"
+            >
+              <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white">{activeTutorial.title}</h3>
+                <button onClick={() => setActiveTutorial(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+                  <X className="w-5 h-5 text-slate-500" />
+                </button>
+              </div>
+              <div className="aspect-video bg-black relative flex items-center justify-center overflow-hidden">
+                <video 
+                  src={activeTutorial.videoUrl} 
+                  autoPlay 
+                  loop 
+                  muted 
+                  controls 
+                  className="w-full h-full object-cover"
+                >
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
