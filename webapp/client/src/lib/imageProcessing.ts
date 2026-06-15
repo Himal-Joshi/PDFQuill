@@ -20,7 +20,7 @@ export async function removeBackground(
     progressShare: number,
   ): Promise<Blob> => {
     const blob = await imglyRemoveBg(file, {
-      progress: (key: string, current: number, total: number) => {
+      progress: (_key: string, current: number, total: number) => {
         if (onProgress && total > 0) {
           const localProgress = (current / total) * progressShare;
           onProgress(Math.min(Math.round(progressOffset + localProgress), 99));

@@ -305,6 +305,7 @@ function App() {
   const [ocrExtractTables, setOcrExtractTables] = useState(true);
   const [ocrProgress, setOcrProgress] = useState<OcrProgress | null>(null);
   const [ocrTextResult, setOcrTextResult] = useState<OcrTextResult | null>(null);
+  const [bgProgress, setBgProgress] = useState<number | null>(null);
 
   // HTML & Encryption state
   const [htmlContent, setHtmlContent] = useState('');
@@ -365,6 +366,7 @@ function App() {
     setThumbnails([]);
     setOcrProgress(null);
     setOcrTextResult(null);
+    setBgProgress(null);
   };
 
   const goHome = () => {
@@ -454,6 +456,7 @@ function App() {
     setDownloadUrl('');
     setOcrProgress(null);
     setOcrTextResult(null);
+    setBgProgress(null);
     setDownloadUrls([]);
 
     try {
@@ -483,7 +486,7 @@ function App() {
         resultUrl = result.url;
         setDownloadExtension(result.extension);
       } else if (activeTool === 'remove-bg') {
-        const result: ConversionResult = await removeBackground(files, setProgress);
+        const result: ConversionResult = await removeBackground(files, setBgProgress);
         resultUrl = result.url;
         setDownloadExtension(result.extension);
       } else if (activeTool === 'ocr') {
@@ -963,6 +966,32 @@ function App() {
                         />
                       </div>
                       <p className="mt-2 text-xs font-medium text-blue-500 dark:text-blue-400 text-right">{ocrProgress.percent}%</p>
+                    </motion.div>
+                  )}
+
+                  {/* Background Removal Progress Display */}
+                  {loading && bgProgress !== null && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-6 rounded-2xl border border-blue-100 dark:border-blue-900/30 bg-blue-50 dark:bg-blue-900/10 p-6"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-black uppercase tracking-widest text-blue-500 dark:text-blue-400 animate-pulse">
+                          ⚡ Removing Background
+                        </span>
+                        <span className="text-sm font-bold text-blue-600 dark:text-blue-300">
+                          {bgProgress}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-blue-100 dark:bg-blue-900/30 rounded-full h-3 overflow-hidden">
+                        <motion.div
+                          className="h-full bg-gradient-to-r from-blue-500 to-primary rounded-full"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${bgProgress}%` }}
+                          transition={{ duration: 0.3, ease: 'easeOut' }}
+                        />
+                      </div>
                     </motion.div>
                   )}
                 </motion.div>
