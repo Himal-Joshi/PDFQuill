@@ -889,7 +889,10 @@ function App() {
                         ))}
                       </div>
                     ) : (
-                 )}
+                      <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-8">No pages to preview.</p>
+                    )}
+                  </motion.div>
+                )}
 
                 {/* Previews & Downloads (Wide Layout) */}
                 <AnimatePresence>
