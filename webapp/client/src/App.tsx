@@ -889,10 +889,102 @@ function App() {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-8">No pages to preview.</p>
-                    )}
-                  </motion.div>
-                )}
+                 )}
+
+                {/* Previews & Downloads (Wide Layout) */}
+                <AnimatePresence>
+                  {activeTool === 'remove-bg' && processedPreviews.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="card p-6 border border-slate-200 dark:border-slate-800"
+                    >
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-6">
+                        Background Removal Preview
+                      </h3>
+                      <div className="grid gap-8">
+                        {processedPreviews.map((preview, index) => (
+                          <div key={index} className="flex flex-col gap-4 border-b border-slate-100 dark:border-slate-800 last:border-b-0 pb-6 last:pb-0">
+                            {processedPreviews.length > 1 && (
+                              <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{preview.name}</span>
+                            )}
+                            <div className="grid sm:grid-cols-2 gap-6">
+                              <div className="flex flex-col gap-2">
+                                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Original</span>
+                                <div className="h-64 sm:h-80 w-full bg-slate-50 dark:bg-slate-950 rounded-xl overflow-hidden flex items-center justify-center p-4 border border-slate-200 dark:border-slate-800">
+                                  <img src={preview.originalUrl} alt="Original" className="max-w-full max-h-full object-contain rounded" />
+                                </div>
+                              </div>
+                              <div className="flex flex-col gap-2">
+                                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Background Removed</span>
+                                <div 
+                                  className="h-64 sm:h-80 w-full rounded-xl overflow-hidden flex items-center justify-center p-4 border border-slate-200 dark:border-slate-800"
+                                  style={{ 
+                                    backgroundImage: isDarkMode
+                                      ? 'conic-gradient(#1e293b 25%, #0f172a 0 50%, #1e293b 0 75%, #0f172a 0)'
+                                      : 'conic-gradient(#f1f5f9 25%, #e2e8f0 0 50%, #f1f5f9 0 75%, #e2e8f0 0)', 
+                                    backgroundSize: '20px 20px' 
+                                  }}
+                                >
+                                  <img src={preview.processedUrl} alt="Background Removed" className="max-w-full max-h-full object-contain drop-shadow-lg" />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {downloadUrl && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      className="flex flex-col gap-6 rounded-2xl border border-emerald-100 dark:border-emerald-900/30 bg-emerald-50 dark:bg-emerald-900/10 px-8 py-8 text-emerald-900 dark:text-emerald-100 sm:flex-row sm:items-center sm:justify-between shadow-xl shadow-emerald-500/10"
+                    >
+                      <div className="flex items-center gap-6">
+                        <div className="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
+                          <CheckCircle size={32} />
+                        </div>
+                        <div>
+                          <h3 className="font-display text-2xl font-extrabold tracking-tight">Ready to Download</h3>
+                          <p className="text-emerald-600 dark:text-emerald-400 font-medium mt-1">Your file was processed successfully.</p>
+                        </div>
+                      </div>
+                      <a
+                        href={downloadUrl}
+                        download={`PDFQuill_${activeTool}${activeTool === 'split' && splitMode === 'all' ? '.zip' : (activeTool === 'pdf-to-image' || activeTool === 'compress-image' || activeTool === 'remove-bg') ? `.${downloadExtension}` : '.pdf'}`}
+                        className="btn bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-4 text-lg shadow-lg shadow-emerald-600/20"
+                      >
+                        <Download size={20} className="mr-2" />
+                        Download
+                      </a>
+                    </motion.div>
+                  )}
+
+                  {downloadUrls.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      className="flex flex-col gap-4 mt-4"
+                    >
+                      <h3 className="font-display text-xl font-extrabold tracking-tight">Downloads Ready</h3>
+                      {downloadUrls.map((dl, idx) => (
+                        <a
+                          key={idx}
+                          href={dl.url}
+                          download={dl.name}
+                          className="btn bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-4 text-lg shadow-lg shadow-emerald-600/20 flex justify-center items-center"
+                        >
+                          <Download size={20} className="mr-2" />
+                          Download {dl.name.replace('.pdf', '').replace('_', ' ')}
+                        </a>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
                 </section>
 
                 <aside className="w-full lg:w-[380px] shrink-0 grid gap-8 lg:sticky lg:top-28">
@@ -1023,98 +1115,7 @@ function App() {
                       </div>
                       <p className="text-sm font-bold">{error}</p>
                     </motion.div>
-                  )}
-
-                  {activeTool === 'remove-bg' && processedPreviews.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="card p-6 mb-6 overflow-hidden border border-slate-200 dark:border-slate-800"
-                    >
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-6">
-                        Background Removal Preview
-                      </h3>
-                      <div className="grid gap-8">
-                        {processedPreviews.map((preview, index) => (
-                          <div key={index} className="flex flex-col gap-4 border-b border-slate-100 dark:border-slate-800 last:border-b-0 pb-6 last:pb-0">
-                            {processedPreviews.length > 1 && (
-                              <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{preview.name}</span>
-                            )}
-                            <div className="grid sm:grid-cols-2 gap-6">
-                              <div className="flex flex-col gap-2">
-                                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Original</span>
-                                <div className="h-64 sm:h-80 w-full bg-slate-50 dark:bg-slate-950 rounded-xl overflow-hidden flex items-center justify-center p-4 border border-slate-200 dark:border-slate-800">
-                                  <img src={preview.originalUrl} alt="Original" className="max-w-full max-h-full object-contain rounded" />
-                                </div>
-                              </div>
-                              <div className="flex flex-col gap-2">
-                                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Background Removed</span>
-                                <div 
-                                  className="h-64 sm:h-80 w-full rounded-xl overflow-hidden flex items-center justify-center p-4 border border-slate-200 dark:border-slate-800"
-                                  style={{ 
-                                    backgroundImage: isDarkMode
-                                      ? 'conic-gradient(#1e293b 25%, #0f172a 0 50%, #1e293b 0 75%, #0f172a 0)'
-                                      : 'conic-gradient(#f1f5f9 25%, #e2e8f0 0 50%, #f1f5f9 0 75%, #e2e8f0 0)', 
-                                    backgroundSize: '20px 20px' 
-                                  }}
-                                >
-                                  <img src={preview.processedUrl} alt="Background Removed" className="max-w-full max-h-full object-contain drop-shadow-lg" />
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {downloadUrl && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      className="flex flex-col gap-6 rounded-2xl border border-emerald-100 dark:border-emerald-900/30 bg-emerald-50 dark:bg-emerald-900/10 px-8 py-8 text-emerald-900 dark:text-emerald-100 sm:flex-row sm:items-center sm:justify-between shadow-xl shadow-emerald-500/10"
-                    >
-                      <div className="flex items-center gap-6">
-                        <div className="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
-                          <CheckCircle size={32} />
-                        </div>
-                        <div>
-                          <h3 className="font-display text-2xl font-extrabold tracking-tight">Ready to Download</h3>
-                          <p className="text-emerald-600 dark:text-emerald-400 font-medium mt-1">Your file was processed successfully.</p>
-                        </div>
-                      </div>
-                      <a
-                        href={downloadUrl}
-                        download={`PDFQuill_${activeTool}${activeTool === 'split' && splitMode === 'all' ? '.zip' : (activeTool === 'pdf-to-image' || activeTool === 'compress-image' || activeTool === 'remove-bg') ? `.${downloadExtension}` : '.pdf'}`}
-                        className="btn bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-4 text-lg shadow-lg shadow-emerald-600/20"
-                      >
-                        <Download size={20} className="mr-2" />
-                        Download
-                      </a>
-                    </motion.div>
-                  )}
-
-                  {downloadUrls.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      className="flex flex-col gap-4 mt-4"
-                    >
-                      <h3 className="font-display text-xl font-extrabold tracking-tight">Downloads Ready</h3>
-                      {downloadUrls.map((dl, idx) => (
-                        <a
-                          key={idx}
-                          href={dl.url}
-                          download={dl.name}
-                          className="btn bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-4 text-lg shadow-lg shadow-emerald-600/20 flex justify-center items-center"
-                        >
-                          <Download size={20} className="mr-2" />
-                          Download {dl.name.replace('.pdf', '').replace('_', ' ')}
-                        </a>
-                      ))}
-                    </motion.div>
+   
                   )}
 
                   {/* OCR Extracted Text Results */}
