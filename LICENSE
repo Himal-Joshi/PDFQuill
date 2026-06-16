@@ -1,17 +1,20 @@
-PDFQuill License Agreement
+# PDFQuill License Agreement
 
 Copyright (c) 2026 Himal Joshi
 
 Terms and Conditions:
 
-1. PERSONAL AND NON-COMMERCIAL USE:
-   Anyone is granted permission to use this software for free, solely for personal and non-commercial purposes.
+1. PERSONAL AND NON-COMMERCIAL USE (WITH ATTRIBUTION):
+   Anyone is granted permission to use this software for free, solely for personal and non-commercial purposes, provided that appropriate credit is given to Himal Joshi and the PDFQuill project name. This original copyright notice must remain intact in all copies or substantial portions of the software.
 
 2. COMMERCIAL RESTRICTIONS:
-   Selling this software, or any modified version thereof, is strictly prohibited. Use of this software for commercial purposes is not allowed without a separate commercial license from the author.
+   Selling this software, or any modified version thereof, is strictly prohibited. Use of this software for commercial purposes, within a for-profit business, or for revenue-generating activities is not allowed without a separate, written commercial license from the author.
 
 3. MODIFICATION AND DISTRIBUTION:
    Modifying the code and distributing modified versions of this software is NOT allowed without explicit, prior written permission from the author.
 
-4. WARRANTY:
+4. COMMERCIAL INQUIRIES:
+   To negotiate terms, request permission, or obtain a commercial license for PDFQuill, please contact the author directly at: [your.email@example.com]
+
+5. WARRANTY:
    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
