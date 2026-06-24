@@ -87,3 +87,107 @@ export async function removeBackground(
   if (onProgress) onProgress(100);
   return { url: URL.createObjectURL(zipBlob), extension: 'zip', previews };
 }
+
+/**
+ * Helper to parse SVG dimensions (width, height, or viewBox).
+ */
+async function getSvgDimensions(file: File): Promise<{ width: number; height: number }> {
+  try {
+    const text = await file.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(text, 'image/svg+xml');
+    const svg = doc.querySelector('svg');
+    if (!svg) {
+      return { width: 800, height: 800 };
+    }
+    
+    let width = parseFloat(svg.getAttribute('width') || '');
+    let height = parseFloat(svg.getAttribute('height') || '');
+    
+    if (isNaN(width) || isNaN(height)) {
+      const viewBox = svg.getAttribute('viewBox');
+      if (viewBox) {
+        const parts = viewBox.trim().split(/\s+/).map(parseFloat);
+        if (parts.length === 4) {
+          return { width: parts[2], height: parts[3] };
+        }
+      }
+    }
+    
+    return { 
+      width: width || 800, 
+      height: height || 800 
+    };
+  } catch (e) {
+    return { width: 800, height: 800 };
+  }
+}
+
+/**
+ * Helper to load an image from a URL.
+ */
+function loadSvgImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Failed to render SVG. Please ensure the file is valid.'));
+    img.src = url;
+  });
+}
+
+/**
+ * Convert SVG files to PNG images using HTML5 Canvas.
+ */
+export async function svgToPng(
+  files: File[],
+  scale: number = 1.0,
+  onProgress?: (p: number) => void
+): Promise<{ url: string; extension: string }> {
+  const convertOne = async (file: File): Promise<Blob> => {
+    const dimensions = await getSvgDimensions(file);
+    const width = Math.round(dimensions.width * scale);
+    const height = Math.round(dimensions.height * scale);
+
+    const objectUrl = URL.createObjectURL(file);
+    let img: HTMLImageElement;
+    try {
+      img = await loadSvgImage(objectUrl);
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not create canvas context.');
+
+    // Clear and draw image
+    ctx.clearRect(0, 0, width, height);
+    ctx.drawImage(img, 0, 0, width, height);
+
+    return new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Failed to export PNG.'))), 'image/png');
+    });
+  };
+
+  if (files.length === 1) {
+    const blob = await convertOne(files[0]);
+    if (onProgress) onProgress(100);
+    return { url: URL.createObjectURL(blob), extension: 'png' };
+  }
+
+  const zip = new JSZip();
+  const sharePerFile = 80 / files.length;
+  for (let i = 0; i < files.length; i++) {
+    const blob = await convertOne(files[i]);
+    const baseName = files[i].name.replace(/\.[^.]+$/, '');
+    zip.file(`${baseName}.png`, blob);
+    if (onProgress) onProgress(Math.round(((i + 1) / files.length) * sharePerFile));
+  }
+
+  const zipBlob = await zip.generateAsync({ type: 'blob' });
+  if (onProgress) onProgress(100);
+  return { url: URL.createObjectURL(zipBlob), extension: 'zip' };
+}
+

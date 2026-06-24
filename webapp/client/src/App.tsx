@@ -37,7 +37,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { mergePdfs, splitPdf, compressPdf, rotatePdf, watermarkPdf, addPageNumbers, organizePdf, imagesToPdf, pdfToImages, compressImages, flattenPdf, protectPdf, unlockPdf, type ConversionResult } from './lib/pdfProcessing';
-import { removeBackground, type ImageRemovalPreview, type ImageRemovalResult } from './lib/imageProcessing';
+import { removeBackground, svgToPng, type ImageRemovalPreview, type ImageRemovalResult } from './lib/imageProcessing';
 import { ocrMakeSearchable, ocrExtractText, OCR_LANGUAGES, type OcrProgress, type OcrTextResult } from './lib/ocrProcessing';
 import html2pdf from 'html2pdf.js';
 import { auth, googleProvider } from './lib/firebase';
@@ -51,7 +51,7 @@ function cn(...inputs: ClassValue[]) {
 
 // const API_BASE = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? '/PDFQuill' : '/PDFQuill');
 
-type Tool = 'merge' | 'split' | 'compress' | 'rotate' | 'watermark' | 'page-numbers' | 'organize' | 'convert' | 'pdf-to-image' | 'compress-image' | 'remove-bg' | 'ocr' | 'ocr-extract' | 'html-to-pdf' | 'flatten-pdf' | 'protect-pdf' | 'unlock-pdf';
+type Tool = 'merge' | 'split' | 'compress' | 'rotate' | 'watermark' | 'page-numbers' | 'organize' | 'convert' | 'pdf-to-image' | 'compress-image' | 'remove-bg' | 'ocr' | 'ocr-extract' | 'html-to-pdf' | 'flatten-pdf' | 'protect-pdf' | 'unlock-pdf' | 'svg-to-png';
 
 type ToolConfig = {
   id: Tool;
@@ -213,6 +213,15 @@ const tools: ToolConfig[] = [
     lucideIcon: Unlock,
     requiresUser: true,
   },
+  {
+    id: 'svg-to-png',
+    label: 'SVG to PNG',
+    description: 'Convert vector SVG files to high-resolution PNG images.',
+    endpoint: '',
+    icon: 'image',
+    lucideIcon: FileImage,
+    multiple: true,
+  },
 ];
 
 type ViewType = 'main' | 'pricing' | 'solutions' | 'privacy' | 'terms' | 'login' | 'docs' | 'get-started';
@@ -369,6 +378,8 @@ function App() {
     setOcrTextResult(null);
     setBgProgress(null);
     setProcessedPreviews([]);
+    setImageScale(1.0);
+    setImageQuality(0.75);
   };
 
   const goHome = () => {
@@ -496,6 +507,10 @@ function App() {
         setDownloadExtension(result.extension);
       } else if (activeTool === 'compress-image') {
         const result: ConversionResult = await compressImages(files, imageQuality, imageScale);
+        resultUrl = result.url;
+        setDownloadExtension(result.extension);
+      } else if (activeTool === 'svg-to-png') {
+        const result = await svgToPng(files, imageScale);
         resultUrl = result.url;
         setDownloadExtension(result.extension);
       } else if (activeTool === 'remove-bg') {
@@ -726,7 +741,7 @@ function App() {
                     type="file"
                     className="hidden"
                     multiple={selectedTool.multiple}
-                    accept={selectedTool.acceptsImages ? '.png,.jpg,.jpeg' : activeTool === 'html-to-pdf' ? '.html,.htm' : '.pdf'}
+                    accept={activeTool === 'svg-to-png' ? '.svg' : selectedTool.acceptsImages ? '.png,.jpg,.jpeg' : activeTool === 'html-to-pdf' ? '.html,.htm' : '.pdf'}
                     onChange={handleFileChange}
                   />
                   <label
@@ -745,7 +760,7 @@ function App() {
                       <Upload size={32} />
                     </div>
                     <span className="text-xl font-bold text-slate-900 dark:text-white mb-2">
-                      {files.length > 0 ? `${files.length} files selected` : `Drop your ${selectedTool.acceptsImages ? 'images' : activeTool === 'html-to-pdf' ? 'HTML files' : 'PDFs'} here`}
+                      {files.length > 0 ? `${files.length} files selected` : `Drop your ${activeTool === 'svg-to-png' ? 'SVG files' : selectedTool.acceptsImages ? 'images' : activeTool === 'html-to-pdf' ? 'HTML files' : 'PDFs'} here`}
                     </span>
                     <p className="text-slate-500 dark:text-slate-400 max-w-xs">
                       {selectedTool.multiple ? 'Click to browse or drag and drop multiple files' : 'Select a single file to begin processing'}
@@ -1676,6 +1691,32 @@ function ToolOptions({
             className="input-control"
           />
         </Field>
+      </div>
+    );
+  }
+
+  if (activeTool === 'svg-to-png') {
+    return (
+      <div className="grid gap-6">
+        <Field label={`Resolution Scale (${imageScale.toFixed(1)}x)`}>
+          <input
+            type="range"
+            min="0.5"
+            max="5"
+            step="0.5"
+            value={imageScale}
+            onChange={(e) => setImageScale(Number(e.target.value))}
+            className="w-full accent-primary"
+          />
+          <div className="flex justify-between text-xs font-medium text-slate-400">
+            <span>0.5x (Compact)</span>
+            <span>1.0x (Original)</span>
+            <span>5.0x (High-Res)</span>
+          </div>
+        </Field>
+        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+          Render vector SVG drawings into high-resolution PNG images. SVGs are scaled losslessly before exporting.
+        </p>
       </div>
     );
   }
