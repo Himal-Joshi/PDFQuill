@@ -101,8 +101,8 @@ async function getSvgDimensions(file: File): Promise<{ width: number; height: nu
       return { width: 800, height: 800 };
     }
     
-    let width = parseFloat(svg.getAttribute('width') || '');
-    let height = parseFloat(svg.getAttribute('height') || '');
+    const width = parseFloat(svg.getAttribute('width') || '');
+    const height = parseFloat(svg.getAttribute('height') || '');
     
     if (isNaN(width) || isNaN(height)) {
       const viewBox = svg.getAttribute('viewBox');
@@ -118,7 +118,7 @@ async function getSvgDimensions(file: File): Promise<{ width: number; height: nu
       width: width || 800, 
       height: height || 800 
     };
-  } catch (e) {
+  } catch {
     return { width: 800, height: 800 };
   }
 }
