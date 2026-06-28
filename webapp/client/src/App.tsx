@@ -388,7 +388,7 @@ function App() {
 
   // Generate thumbnails when files change (for single-file PDF tools)
   useEffect(() => {
-    if (files.length === 0 || activeTool === 'convert' || activeTool === 'compress-image' || activeTool === 'remove-bg') {
+    if (files.length === 0 || activeTool === 'convert' || activeTool === 'compress-image' || activeTool === 'remove-bg' || activeTool === 'svg-to-png') {
       Promise.resolve().then(() => setThumbnails([]));
       return;
     }
@@ -859,7 +859,7 @@ function App() {
                 )}
 
                 {/* Page Thumbnails Grid */}
-                {files.length > 0 && activeTool !== 'merge' && activeTool !== 'convert' && activeTool !== 'compress-image' && activeTool !== 'remove-bg' && (
+                {files.length > 0 && activeTool !== 'merge' && activeTool !== 'convert' && activeTool !== 'compress-image' && activeTool !== 'remove-bg' && activeTool !== 'svg-to-png' && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -972,7 +972,7 @@ function App() {
                       </div>
                       <a
                         href={downloadUrl}
-                        download={`PDFQuill_${activeTool}${activeTool === 'split' && splitMode === 'all' ? '.zip' : (activeTool === 'pdf-to-image' || activeTool === 'compress-image' || activeTool === 'remove-bg') ? `.${downloadExtension}` : '.pdf'}`}
+                        download={`PDFQuill_${activeTool}${activeTool === 'split' && splitMode === 'all' ? '.zip' : (activeTool === 'pdf-to-image' || activeTool === 'compress-image' || activeTool === 'remove-bg' || activeTool === 'svg-to-png') ? `.${downloadExtension}` : '.pdf'}`}
                         className="btn bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-4 text-lg shadow-lg shadow-emerald-600/20"
                       >
                         <Download size={20} className="mr-2" />
