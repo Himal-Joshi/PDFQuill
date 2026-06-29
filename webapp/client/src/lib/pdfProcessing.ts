@@ -175,12 +175,57 @@ export async function splitPdf(
   return URL.createObjectURL(zipBlob);
 }
 
-export async function compressPdf(file: File, onProgress?: (p: number) => void): Promise<string> {
+export async function compressPdf(file: File, level: 'low' | 'medium' | 'high' = 'medium', onProgress?: (p: number) => void): Promise<string> {
+  let scale = 1.5;
+  let quality = 0.8;
+
+  if (level === 'low') {
+    scale = 2.0;
+    quality = 0.9;
+  } else if (level === 'medium') {
+    scale = 1.5;
+    quality = 0.7;
+  } else if (level === 'high') {
+    scale = 1.0;
+    quality = 0.5;
+  }
+
   const bytes = await file.arrayBuffer();
-  const source = await PDFDocument.load(bytes, { ignoreEncryption: true });
-  const optimizedBytes = await source.save({ useObjectStreams: true });
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+  const totalPages = pdf.numPages;
+  const outDoc = await PDFDocument.create();
+
+  for (let i = 1; i <= totalPages; i++) {
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not create canvas context');
+
+    await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('Canvas error'))), 'image/jpeg', quality);
+    });
+
+    const jpgBytes = await blob.arrayBuffer();
+    const jpgImage = await outDoc.embedJpg(jpgBytes);
+    const outPage = outDoc.addPage([viewport.width, viewport.height]);
+    outPage.drawImage(jpgImage, {
+      x: 0,
+      y: 0,
+      width: viewport.width,
+      height: viewport.height,
+    });
+
+    if (onProgress) onProgress(Math.round((i / totalPages) * 90));
+  }
+
+  const pdfBytes = await outDoc.save();
   if (onProgress) onProgress(100);
-  const blob = new Blob([optimizedBytes as unknown as BlobPart], { type: 'application/pdf' });
+  const blob = new Blob([pdfBytes.buffer as ArrayBuffer], { type: 'application/pdf' });
   return URL.createObjectURL(blob);
 }
 

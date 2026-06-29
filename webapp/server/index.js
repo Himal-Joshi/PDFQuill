@@ -7,21 +7,22 @@ const multer = require('multer');
 const path = require('path');
 const { randomUUID } = require('crypto');
 const { PDFDocument, StandardFonts, degrees, rgb } = require('pdf-lib');
-const admin = require('firebase-admin');
+const { initializeApp, getApps, applicationDefault, cert } = require('firebase-admin/app');
+const { getAuth } = require('firebase-admin/auth');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 
 const app = express();
 
 // Initialize Firebase Admin
-if (!admin.apps.length) {
+if (getApps().length === 0) {
   try {
     if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-      admin.initializeApp({
-        credential: admin.credential.cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT))
+      initializeApp({
+        credential: cert(JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT))
       });
     } else {
-      admin.initializeApp({ credential: admin.credential.applicationDefault() });
+      initializeApp({ credential: applicationDefault() });
     }
   } catch (err) {
     console.warn('Firebase Admin init warning:', err.message);
@@ -73,7 +74,7 @@ async function authMiddleware(req, res, next) {
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.split('Bearer ')[1];
     try {
-      const decodedToken = await admin.auth().verifyIdToken(token);
+      const decodedToken = await getAuth().verifyIdToken(token);
       req.user = decodedToken;
     } catch (error) {
       console.warn('Invalid token:', error.message);
