@@ -295,6 +295,7 @@ function App() {
   const [downloadUrls, setDownloadUrls] = useState<{url: string, name: string}[]>([]);
   const [error, setError] = useState('');
   const [splitMode, setSplitMode] = useState<'all' | 'range' | 'color'>('all');
+  const [compressLevel, setCompressLevel] = useState<'low' | 'medium' | 'high'>('medium');
   const [pageRange, setPageRange] = useState('');
   const [rotation, setRotation] = useState(90);
   const [rotationMode, setRotationMode] = useState<'all' | 'specific'>('all');
@@ -451,6 +452,27 @@ function App() {
     event.target.value = '';
   };
 
+  const handleDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const newFiles = Array.from(e.dataTransfer.files);
+      if (selectedTool.multiple) {
+        setFiles((current) => [...current, ...newFiles]);
+      } else {
+        setFiles([newFiles[0]]);
+      }
+      setDownloadUrl('');
+      setDownloadUrls([]);
+      setError('');
+    }
+  };
+
   const removeFile = (index: number) => {
     setFiles((currentFiles) => currentFiles.filter((_file, fileIndex) => fileIndex !== index));
   };
@@ -490,7 +512,7 @@ function App() {
       } else if (activeTool === 'split') {
         resultUrl = await splitPdf(files[0], splitMode, pageRange);
       } else if (activeTool === 'compress') {
-        resultUrl = await compressPdf(files[0]);
+        resultUrl = await compressPdf(files[0], compressLevel);
       } else if (activeTool === 'rotate') {
         resultUrl = await rotatePdf(files[0], rotation, rotationMode, rotationPages);
       } else if (activeTool === 'watermark') {
@@ -746,6 +768,8 @@ function App() {
                   />
                   <label
                     htmlFor="file-input"
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
                     className={cn(
                       'flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-16 text-center transition-all duration-300',
                       files.length > 0
@@ -1014,8 +1038,11 @@ function App() {
                   >
                   <ToolOptions
                     activeTool={activeTool}
+                    files={files}
                     user={user}
                     setError={setError}
+                    compressLevel={compressLevel}
+                    setCompressLevel={setCompressLevel}
                     splitMode={splitMode}
                     setSplitMode={setSplitMode}
                     pageRange={pageRange}
@@ -1269,8 +1296,11 @@ function App() {
 
 type ToolOptionsProps = {
   activeTool: Tool | null;
+  files: File[];
   user: { email: string; token: string } | null;
   setError: (msg: string) => void;
+  compressLevel: 'low' | 'medium' | 'high';
+  setCompressLevel: (value: 'low' | 'medium' | 'high') => void;
   splitMode: 'all' | 'range' | 'color';
   setSplitMode: (value: 'all' | 'range' | 'color') => void;
   pageRange: string;
@@ -1308,6 +1338,9 @@ type ToolOptionsProps = {
 
 function ToolOptions({
   activeTool,
+  files,
+  compressLevel,
+  setCompressLevel,
   splitMode,
   setSplitMode,
   pageRange,
@@ -1344,6 +1377,45 @@ function ToolOptions({
   user,
   setError,
 }: ToolOptionsProps) {
+  if (activeTool === 'compress') {
+    const totalSize = files.reduce((acc, file) => acc + file.size, 0);
+    const sizeInMB = (totalSize / 1024 / 1024).toFixed(2);
+
+    return (
+      <div className="grid gap-6">
+        <Field label="Compression Level">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[
+              { id: 'low', label: 'Low', reduction: '~10-20% smaller' },
+              { id: 'medium', label: 'Medium', reduction: '~30-50% smaller' },
+              { id: 'high', label: 'High', reduction: '~60-80% smaller' },
+            ].map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setCompressLevel(option.id as 'low' | 'medium' | 'high')}
+                className={cn(
+                  'rounded-xl border-2 py-4 px-2 flex flex-col items-center justify-center transition-all duration-200 text-center',
+                  compressLevel === option.id
+                    ? 'border-primary bg-primary/5 text-primary shadow-inner'
+                    : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-primary/30'
+                )}
+              >
+                <span className="text-sm font-bold">{option.label}</span>
+                <span className="text-xs font-medium opacity-70 mt-1">{option.reduction}</span>
+              </button>
+            ))}
+          </div>
+        </Field>
+        {files.length > 0 && (
+           <div className="text-sm text-center font-medium text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 py-3 rounded-xl border border-slate-100 dark:border-slate-800">
+             Original PDF Size: <span className="font-bold text-slate-900 dark:text-white">{sizeInMB} MB</span>
+           </div>
+        )}
+      </div>
+    );
+  }
+
   if (activeTool === 'split') {
     return (
       <div className="grid gap-6">
@@ -1512,9 +1584,7 @@ function ToolOptions({
     return <p className="text-sm font-medium text-slate-500 dark:text-slate-400">All selected images will be merged into a single professional PDF document in the specified order.</p>;
   }
 
-  if (activeTool === 'compress') {
-    return <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Our advanced compression algorithm will optimize your PDF for the web while maintaining high visual quality.</p>;
-  }
+
 
   if (activeTool === 'pdf-to-image') {
     return <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Each page will be rendered as a high-resolution PNG image. Multi-page PDFs are delivered as a ZIP archive.</p>;
