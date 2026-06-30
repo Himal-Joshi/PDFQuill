@@ -978,54 +978,7 @@ function App() {
                     </motion.div>
                   )}
 
-                  {downloadUrl && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      className="flex flex-col gap-6 rounded-2xl border border-emerald-100 dark:border-emerald-900/30 bg-emerald-50 dark:bg-emerald-900/10 px-8 py-8 text-emerald-900 dark:text-emerald-100 sm:flex-row sm:items-center sm:justify-between shadow-xl shadow-emerald-500/10"
-                    >
-                      <div className="flex items-center gap-6">
-                        <div className="w-16 h-16 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
-                          <CheckCircle size={32} />
-                        </div>
-                        <div>
-                          <h3 className="font-display text-2xl font-extrabold tracking-tight">Ready to Download</h3>
-                          <p className="text-emerald-600 dark:text-emerald-400 font-medium mt-1">Your file was processed successfully.</p>
-                        </div>
-                      </div>
-                      <a
-                        href={downloadUrl}
-                        download={`PDFQuill_${activeTool}${activeTool === 'split' && splitMode === 'all' ? '.zip' : (activeTool === 'pdf-to-image' || activeTool === 'compress-image' || activeTool === 'remove-bg' || activeTool === 'svg-to-png') ? `.${downloadExtension}` : '.pdf'}`}
-                        className="btn bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-4 text-lg shadow-lg shadow-emerald-600/20"
-                      >
-                        <Download size={20} className="mr-2" />
-                        Download
-                      </a>
-                    </motion.div>
-                  )}
 
-                  {downloadUrls.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      className="flex flex-col gap-4 mt-4"
-                    >
-                      <h3 className="font-display text-xl font-extrabold tracking-tight">Downloads Ready</h3>
-                      {downloadUrls.map((dl, idx) => (
-                        <a
-                          key={idx}
-                          href={dl.url}
-                          download={dl.name}
-                          className="btn bg-emerald-600 text-white hover:bg-emerald-700 px-8 py-4 text-lg shadow-lg shadow-emerald-600/20 flex justify-center items-center"
-                        >
-                          <Download size={20} className="mr-2" />
-                          Download {dl.name.replace('.pdf', '').replace('_', ' ')}
-                        </a>
-                      ))}
-                    </motion.div>
-                  )}
                 </AnimatePresence>
                 </section>
 
@@ -1148,6 +1101,60 @@ function App() {
                 </motion.div>
 
                 <AnimatePresence>
+                  {downloadUrl && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      className="flex flex-col gap-4 rounded-2xl border border-emerald-100 dark:border-emerald-900/30 bg-emerald-50 dark:bg-emerald-900/10 p-6 text-emerald-900 dark:text-emerald-100 shadow-xl shadow-emerald-500/10 mt-6"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
+                          <CheckCircle size={24} />
+                        </div>
+                        <div>
+                          <h3 className="font-display text-lg font-extrabold tracking-tight">Ready to Download</h3>
+                          <p className="text-emerald-600 dark:text-emerald-400 text-sm font-medium mt-0.5">Processed successfully.</p>
+                        </div>
+                      </div>
+                      <a
+                        href={downloadUrl}
+                        download={`PDFQuill_${activeTool}${activeTool === 'split' && splitMode === 'all' ? '.zip' : (activeTool === 'pdf-to-image' || activeTool === 'compress-image' || activeTool === 'remove-bg' || activeTool === 'svg-to-png') ? `.${downloadExtension}` : '.pdf'}`}
+                        className="btn bg-emerald-600 text-white hover:bg-emerald-700 w-full py-3 text-base shadow-lg shadow-emerald-600/20 flex justify-center items-center mt-2"
+                      >
+                        <Download size={18} className="mr-2" />
+                        Download File
+                      </a>
+                    </motion.div>
+                  )}
+
+                  {downloadUrls.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      className="flex flex-col gap-3 rounded-2xl border border-emerald-100 dark:border-emerald-900/30 bg-emerald-50 dark:bg-emerald-900/10 p-6 shadow-xl shadow-emerald-500/10 mt-6"
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
+                          <CheckCircle size={20} />
+                        </div>
+                        <h3 className="font-display text-lg font-extrabold tracking-tight text-emerald-900 dark:text-emerald-100">Downloads Ready</h3>
+                      </div>
+                      {downloadUrls.map((dl, idx) => (
+                        <a
+                          key={idx}
+                          href={dl.url}
+                          download={dl.name}
+                          className="btn bg-emerald-600 text-white hover:bg-emerald-700 w-full py-3 text-sm shadow-sm shadow-emerald-600/20 flex justify-center items-center"
+                        >
+                          <Download size={16} className="mr-2" />
+                          Download {dl.name.replace('.pdf', '').replace('_', ' ')}
+                        </a>
+                      ))}
+                    </motion.div>
+                  )}
+
                   {error && (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.9 }}
@@ -1239,11 +1246,11 @@ function App() {
                       )}
 
                       {/* Downloads */}
-                      <div className="flex flex-col sm:flex-row gap-3 mt-2">
+                      <div className="flex flex-col gap-3 mt-2">
                         <a
                           href={URL.createObjectURL(new Blob([ocrTextResult.text], { type: 'text/plain' }))}
                           download="PDFQuill_extracted_text.txt"
-                          className="flex-1 btn bg-violet-600 text-white hover:bg-violet-700 px-6 py-3 text-sm shadow-lg shadow-violet-600/20 flex items-center justify-center gap-2"
+                          className="w-full btn bg-violet-600 text-white hover:bg-violet-700 px-6 py-3 text-sm shadow-lg shadow-violet-600/20 flex items-center justify-center gap-2"
                         >
                           <Download size={18} /> Download as .txt
                         </a>
@@ -1252,7 +1259,7 @@ function App() {
                           <a
                             href={URL.createObjectURL(new Blob([ocrTextResult.csv], { type: 'text/csv' }))}
                             download="PDFQuill_extracted_tables.csv"
-                            className="flex-1 btn bg-emerald-600 text-white hover:bg-emerald-700 px-6 py-3 text-sm shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2"
+                            className="w-full btn bg-emerald-600 text-white hover:bg-emerald-700 px-6 py-3 text-sm shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2"
                           >
                             <Download size={18} /> Download Tables as .csv
                           </a>

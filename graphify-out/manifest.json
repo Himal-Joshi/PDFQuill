@@ -1,0 +1,117 @@
+{
+  "C:\\Users\\himal\\Desktop\\Lab Reports\\Projects\\PDFQuill\\package.json": {
+    "mtime": 1781104953.0725539,
+    "ast_hash": "cbc99ea0d91106e4f3118378c6e1f13b",
+    "semantic_hash": "cbc99ea0d91106e4f3118378c6e1f13b"
+  },
+  "C:\\Users\\himal\\Desktop\\Lab Reports\\Projects\\PDFQuill\\webapp\\client\\eslint.config.js": {
+    "mtime": 1781104953.0755472,
+    "ast_hash": "75a0286de267d5393020e4439ed72f6a",
+    "semantic_hash": "75a0286de267d5393020e4439ed72f6a"
+  },
+  "C:\\Users\\himal\\Desktop\\Lab Reports\\Projects\\PDFQuill\\webapp\\client\\package.json": {
+    "mtime": 1781106244.8322933,
+    "ast_hash": "64a33823be5650856f118b82d1411947",
+    "semantic_hash": "64a33823be5650856f118b82d1411947"
+  },
+  "C:\\Users\\himal\\Desktop\\Lab Reports\\Projects\\PDFQuill\\webapp\\client\\src\\App.tsx": {
+    "mtime": 1781165734.4176176,
+    "ast_hash": "decdef9a08aa6b7f0dbb3f9600ffe946",
+    "semantic_hash": "decdef9a08aa6b7f0dbb3f9600ffe946"
+  },
+  "C:\\Users\\himal\\Desktop\\Lab Reports\\Projects\\PDFQuill\\webapp\\client\\src\\lib\\auth.ts": {
+    "mtime": 1781108701.8995783,
+    "ast_hash": "f8cefb90cf56f1838680ae0e9f5a989f",
+    "semantic_hash": "f8cefb90cf56f1838680ae0e9f5a989f"
+  },
+  "C:\\Users\\himal\\Desktop\\Lab Reports\\Projects\\PDFQuill\\webapp\\client\\src\\lib\\pdfProcessing.ts": {
+    "mtime": 1781106409.4341662,
+    "ast_hash": "3228edc0a9c89b2db0caee09ef4334f7",
+    "semantic_hash": "3228edc0a9c89b2db0caee09ef4334f7"
+  },
+  "C:\\Users\\himal\\Desktop\\Lab Reports\\Projects\\PDFQuill\\webapp\\client\\src\\main.tsx": {
+    "mtime": 1781104953.0850575,
+    "ast_hash": "df3369963799e47ef5a77cdca932abf0",
+    "semantic_hash": "df3369963799e47ef5a77cdca932abf0"
+  },
+  "C:\\Users\\himal\\Desktop\\Lab Reports\\Projects\\PDFQuill\\webapp\\client\\tailwind.config.js": {
+    "mtime": 1781104953.0860631,
+    "ast_hash": "9afb21cebd97d1d0507d3a6067926a05",
+    "semantic_hash": "9afb21cebd97d1d0507d3a6067926a05"
+  },
+  "C:\\Users\\himal\\Desktop\\Lab Reports\\Projects\\PDFQuill\\webapp\\client\\tsconfig.app.json": {
+    "mtime": 1781104953.0870695,
+    "ast_hash": "4cd9dda3b62ff2a571c2419a75074a39",
+    "semantic_hash": "4cd9dda3b62ff2a571c2419a75074a39"
+  },
+  "C:\\Users\\himal\\Desktop\\Lab Reports\\Projects\\PDFQuill\\webapp\\client\\tsconfig.json": {
+    "mtime": 1781104953.088258,
+    "ast_hash": "852c3a5df14a4b43ac28e9554ebedf4a",
+    "semantic_hash": "852c3a5df14a4b43ac28e9554ebedf4a"
+  },
+  "C:\\Users\\himal\\Desktop\\Lab Reports\\Projects\\PDFQuill\\webapp\\client\\tsconfig.node.json": {
+    "mtime": 1781104953.088258,
+    "ast_hash": "1cd4c6b260b0dccbad5bc0a25029f390",
+    "semantic_hash": "1cd4c6b260b0dccbad5bc0a25029f390"
+  },
+  "C:\\Users\\himal\\Desktop\\Lab Reports\\Projects\\PDFQuill\\webapp\\client\\vite.config.ts": {
+    "mtime": 1781104953.0892644,
+    "ast_hash": "bc9d10abe3c82690cb5966a4fe93aa8c",
+    "semantic_hash": "bc9d10abe3c82690cb5966a4fe93aa8c"
+  },
+  "C:\\Users\\himal\\Desktop\\Lab Reports\\Projects\\PDFQuill\\webapp\\server\\index.js": {
+    "mtime": 1781104953.0907135,
+    "ast_hash": "3da089fd82a2e620cd1ea5622fc9bfe8",
+    "semantic_hash": "3da089fd82a2e620cd1ea5622fc9bfe8"
+  },
+  "C:\\Users\\himal\\Desktop\\Lab Reports\\Projects\\PDFQuill\\webapp\\server\\package.json": {
+    "mtime": 1781104953.0931773,
+    "ast_hash": "d4abd36a53ec4e594f3b355a3e871ece",
+    "semantic_hash": "d4abd36a53ec4e594f3b355a3e871ece"
+  },
+  "C:\\Users\\himal\\Desktop\\Lab Reports\\Projects\\PDFQuill\\.github\\workflows\\ci.yml": {
+    "mtime": 1781104953.0698142,
+    "ast_hash": "e58de97a9abf3f5219608b69c4dc1db5",
+    "semantic_hash": "e58de97a9abf3f5219608b69c4dc1db5"
+  },
+  "C:\\Users\\himal\\Desktop\\Lab Reports\\Projects\\PDFQuill\\.github\\workflows\\deploy.yml": {
+    "mtime": 1781107619.8909643,
+    "ast_hash": "04e9ee1348a6435495e1dff4fda22bd2",
+    "semantic_hash": "04e9ee1348a6435495e1dff4fda22bd2"
+  },
+  "C:\\Users\\himal\\Desktop\\Lab Reports\\Projects\\PDFQuill\\README.md": {
+    "mtime": 1781104953.0725539,
+    "ast_hash": "559a8ecf90149ed7a8d3e6f5d654283c",
+    "semantic_hash": "559a8ecf90149ed7a8d3e6f5d654283c"
+  },
+  "C:\\Users\\himal\\Desktop\\Lab Reports\\Projects\\PDFQuill\\webapp\\client\\README.md": {
+    "mtime": 1781104953.0755472,
+    "ast_hash": "90319e8f2caaed2d79bf9fc404e521ec",
+    "semantic_hash": "90319e8f2caaed2d79bf9fc404e521ec"
+  },
+  "C:\\Users\\himal\\Desktop\\Lab Reports\\Projects\\PDFQuill\\webapp\\client\\index.html": {
+    "mtime": 1781104953.076547,
+    "ast_hash": "c65993b81f937eb86f39641ce5650395",
+    "semantic_hash": "c65993b81f937eb86f39641ce5650395"
+  },
+  "C:\\Users\\himal\\Desktop\\Lab Reports\\Projects\\PDFQuill\\webapp\\client\\public\\icons.svg": {
+    "mtime": 1781104953.0795522,
+    "ast_hash": "21c7473c592c67dc87223d49892c8f0a",
+    "semantic_hash": "21c7473c592c67dc87223d49892c8f0a"
+  },
+  "C:\\Users\\himal\\Desktop\\Lab Reports\\Projects\\PDFQuill\\webapp\\client\\public\\logo.svg": {
+    "mtime": 1781104953.0805523,
+    "ast_hash": "467e623a9d7df40976089beb48ebbe98",
+    "semantic_hash": "467e623a9d7df40976089beb48ebbe98"
+  },
+  "C:\\Users\\himal\\Desktop\\Lab Reports\\Projects\\PDFQuill\\webapp\\client\\src\\assets\\react.svg": {
+    "mtime": 1781104953.083552,
+    "ast_hash": "f0402b67b6ce880f65666bb49e841696",
+    "semantic_hash": "f0402b67b6ce880f65666bb49e841696"
+  },
+  "C:\\Users\\himal\\Desktop\\Lab Reports\\Projects\\PDFQuill\\webapp\\client\\src\\assets\\vite.svg": {
+    "mtime": 1781104953.0845525,
+    "ast_hash": "6d5180a782d64c8cf51ba01c2a2184d8",
+    "semantic_hash": "6d5180a782d64c8cf51ba01c2a2184d8"
+  }
+}
