@@ -1,0 +1,9 @@
+{
+  "buildCommand": "cd webapp/client && npm install && npm run build",
+  "outputDirectory": "webapp/client/dist",
+  "functions": {
+    "api/*.py": {
+      "maxDuration": 30
+    }
+  }
+}
