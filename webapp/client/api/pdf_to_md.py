@@ -114,8 +114,6 @@ class handler(BaseHTTPRequestHandler):
         origin = self.headers.get("Origin", "")
         allowed = {
             "https://pdfquill.vercel.app",
-            "https://pdfquill.com.np",
-            "https://himal-joshi.github.io",
             "http://localhost:5173",
         }
         if origin in allowed:
