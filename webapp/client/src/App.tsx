@@ -41,7 +41,7 @@ import { mergePdfs, splitPdf, compressPdf, rotatePdf, watermarkPdf, addPageNumbe
 import { removeBackground, svgToPng, type ImageRemovalPreview, type ImageRemovalResult } from './lib/imageProcessing';
 import { ocrMakeSearchable, ocrExtractText, OCR_LANGUAGES, type OcrProgress, type OcrTextResult } from './lib/ocrProcessing';
 import html2pdf from 'html2pdf.js';
-import { pdfToMarkdown, type MarkdownResult } from './lib/markitdownProcessing';
+import { pdfToMarkdown, type MarkdownResult } from './lib/pdfToMdProcessing';
 import { auth, googleProvider } from './lib/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 

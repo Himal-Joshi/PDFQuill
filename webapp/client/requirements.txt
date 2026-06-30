@@ -1,1 +1,1 @@
-markitdown[pdf]
+pdfplumber
