@@ -7,6 +7,7 @@ import {
   ChevronDown,
   Copy,
   Download,
+  FileCode2,
   FileImage,
   FileSearch,
   FileText,
@@ -40,6 +41,7 @@ import { mergePdfs, splitPdf, compressPdf, rotatePdf, watermarkPdf, addPageNumbe
 import { removeBackground, svgToPng, type ImageRemovalPreview, type ImageRemovalResult } from './lib/imageProcessing';
 import { ocrMakeSearchable, ocrExtractText, OCR_LANGUAGES, type OcrProgress, type OcrTextResult } from './lib/ocrProcessing';
 import html2pdf from 'html2pdf.js';
+import { pdfToMarkdown, type MarkdownResult } from './lib/markitdownProcessing';
 import { auth, googleProvider } from './lib/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 
@@ -51,7 +53,7 @@ function cn(...inputs: ClassValue[]) {
 
 // const API_BASE = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? '/PDFQuill' : '/PDFQuill');
 
-type Tool = 'merge' | 'split' | 'compress' | 'rotate' | 'watermark' | 'page-numbers' | 'organize' | 'convert' | 'pdf-to-image' | 'compress-image' | 'remove-bg' | 'ocr' | 'ocr-extract' | 'html-to-pdf' | 'flatten-pdf' | 'protect-pdf' | 'unlock-pdf' | 'svg-to-png';
+type Tool = 'merge' | 'split' | 'compress' | 'rotate' | 'watermark' | 'page-numbers' | 'organize' | 'convert' | 'pdf-to-image' | 'compress-image' | 'remove-bg' | 'ocr' | 'ocr-extract' | 'html-to-pdf' | 'flatten-pdf' | 'protect-pdf' | 'unlock-pdf' | 'svg-to-png' | 'pdf-to-markdown';
 
 type ToolConfig = {
   id: Tool;
@@ -222,6 +224,14 @@ const tools: ToolConfig[] = [
     lucideIcon: FileImage,
     multiple: true,
   },
+  {
+    id: 'pdf-to-markdown',
+    label: 'PDF to Markdown',
+    description: 'Convert PDF documents to clean, structured Markdown — optimized for AI and LLMs.',
+    endpoint: '',
+    icon: 'code',
+    lucideIcon: FileCode2,
+  },
 ];
 
 type ViewType = 'main' | 'pricing' | 'solutions' | 'privacy' | 'terms' | 'login' | 'docs' | 'get-started';
@@ -322,6 +332,9 @@ function App() {
   const [htmlContent, setHtmlContent] = useState('');
   const [pdfPassword, setPdfPassword] = useState('');
 
+  // Markdown conversion state
+  const [markdownResult, setMarkdownResult] = useState<MarkdownResult | null>(null);
+
   // Thumbnail state
   const [thumbnails, setThumbnails] = useState<PageThumbnail[]>([]);
   const [loadingThumbnails, setLoadingThumbnails] = useState(false);
@@ -381,6 +394,7 @@ function App() {
     setProcessedPreviews([]);
     setImageScale(1.0);
     setImageQuality(0.75);
+    setMarkdownResult(null);
   };
 
   const goHome = () => {
@@ -504,6 +518,7 @@ function App() {
     setBgProgress(null);
     setProcessedPreviews([]);
     setDownloadUrls([]);
+    setMarkdownResult(null);
 
     try {
       let resultUrl: string | { url: string; name: string }[] = '';
@@ -567,6 +582,11 @@ function App() {
         
         const blob = await html2pdf().from(element).output('blob');
         resultUrl = URL.createObjectURL(blob);
+      } else if (activeTool === 'pdf-to-markdown') {
+        const mdResult = await pdfToMarkdown(files[0]);
+        setMarkdownResult(mdResult);
+        // No direct download URL — we show the markdown inline with download buttons
+        resultUrl = '';
       }
       
       if (Array.isArray(resultUrl)) {
@@ -1264,6 +1284,57 @@ function App() {
                             <Download size={18} /> Download Tables as .csv
                           </a>
                         )}
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {/* Markdown Conversion Result */}
+                  {markdownResult && activeTool === 'pdf-to-markdown' && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      className="flex flex-col gap-4 rounded-2xl border border-cyan-100 dark:border-cyan-900/30 bg-cyan-50 dark:bg-cyan-900/10 p-6 shadow-xl shadow-cyan-500/10"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center text-cyan-600 dark:text-cyan-400">
+                            <FileCode2 size={20} />
+                          </div>
+                          <div>
+                            <h3 className="font-display text-lg font-extrabold text-slate-900 dark:text-white">Markdown Ready</h3>
+                            <p className="text-xs font-medium text-cyan-500">
+                              {markdownResult.text.length.toLocaleString()} characters
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(markdownResult.text);
+                          }}
+                          className="btn btn-secondary flex items-center gap-2 text-sm"
+                          title="Copy to clipboard"
+                        >
+                          <Copy size={16} /> Copy
+                        </button>
+                      </div>
+
+                      {/* Markdown preview */}
+                      <div className="max-h-80 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4">
+                        <pre className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-mono leading-relaxed">
+                          {markdownResult.text}
+                        </pre>
+                      </div>
+
+                      {/* Download */}
+                      <div className="flex flex-col gap-3 mt-2">
+                        <a
+                          href={URL.createObjectURL(new Blob([markdownResult.text], { type: 'text/markdown' }))}
+                          download="PDFQuill_converted.md"
+                          className="w-full btn bg-cyan-600 text-white hover:bg-cyan-700 px-6 py-3 text-sm shadow-lg shadow-cyan-600/20 flex items-center justify-center gap-2"
+                        >
+                          <Download size={18} /> Download as .md
+                        </a>
                       </div>
                     </motion.div>
                   )}
