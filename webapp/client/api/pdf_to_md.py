@@ -11,7 +11,7 @@ MAX_FILE_SIZE = 4_500_000
 
 class handler(BaseHTTPRequestHandler):
     """Vercel Python serverless function to convert PDF files to Markdown
-    using Microsoft's markitdown library."""
+    using pdfplumber (lightweight alternative to markitdown)."""
 
     def do_POST(self):
         try:
@@ -71,16 +71,44 @@ class handler(BaseHTTPRequestHandler):
                     tmp.write(file_data)
                     tmp_path = tmp.name
 
-                from markitdown import MarkItDown  # lazy import for cold-start speed
+                import pdfplumber  # lazy import for cold-start speed
+                
+                md_lines = []
+                with pdfplumber.open(tmp_path) as pdf:
+                    for i, page in enumerate(pdf.pages):
+                        text = page.extract_text()
+                        if text:
+                            md_lines.append(text)
+                        
+                        # Extract tables and format as markdown
+                        tables = page.extract_tables()
+                        for table in tables:
+                            if not table or not table[0]:
+                                continue
+                            
+                            md_lines.append("") # Empty line before table
+                            
+                            # Clean cell text (replace newlines)
+                            def clean_cell(c):
+                                return str(c).replace("\\n", " ").replace("\n", " ").strip() if c else " "
+                            
+                            # Headers
+                            headers = [clean_cell(h) for h in table[0]]
+                            md_lines.append("| " + " | ".join(headers) + " |")
+                            md_lines.append("|" + "|".join(["---"] * len(headers)) + "|")
+                            
+                            # Rows
+                            for row in table[1:]:
+                                md_lines.append("| " + " | ".join(clean_cell(c) for c in row) + " |")
+                                
+                            md_lines.append("") # Empty line after table
 
-                md = MarkItDown()
-                result = md.convert(tmp_path)
-                markdown_text = result.text_content
+                markdown_text = "\n\n".join(md_lines).strip()
 
-                if not markdown_text or not markdown_text.strip():
+                if not markdown_text:
                     self._send_json(
                         422,
-                        {"error": "Could not extract any content from this PDF. The file may be image-only or empty."},
+                        {"error": "Could not extract any text from this PDF. The file may be image-only (scanned)."},
                     )
                     return
 
@@ -114,8 +142,6 @@ class handler(BaseHTTPRequestHandler):
         origin = self.headers.get("Origin", "")
         allowed = {
             "https://pdfquill.vercel.app",
-            "https://pdfquill.com.np",
-            "https://himal-joshi.github.io",
             "http://localhost:5173",
         }
         if origin in allowed:

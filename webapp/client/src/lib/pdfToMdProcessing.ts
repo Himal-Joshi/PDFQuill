@@ -52,9 +52,27 @@ export async function pdfToMarkdown(file: File): Promise<MarkdownResult> {
 
   let data: { markdown?: string; error?: string };
   try {
+    // Check if the response is JSON before parsing
+    const contentType = response.headers.get('Content-Type') || '';
+    if (!contentType.includes('application/json')) {
+      const text = await response.text();
+      // Vercel often returns HTML error pages for 500s/timeouts
+      if (response.status === 504) {
+        throw new Error('The conversion timed out. Try a smaller PDF (under 2 MB).');
+      }
+      if (response.status === 413) {
+        throw new Error('File too large for the server. Maximum size is 4.5 MB.');
+      }
+      throw new Error(
+        `Server error (${response.status}): ${text.substring(0, 200).replace(/<[^>]*>/g, '').trim() || 'No details available.'}`
+      );
+    }
     data = await response.json();
-  } catch {
-    throw new Error('Received an invalid response from the server.');
+  } catch (e) {
+    if (e instanceof Error && e.message !== 'Received an invalid response from the server.') {
+      throw e; // Re-throw our specific errors above
+    }
+    throw new Error('Received an invalid response from the server. The function may not be deployed correctly.');
   }
 
   if (!response.ok) {
