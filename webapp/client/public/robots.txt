@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 
 # Sitemaps
-Sitemap: https://pdfquill.com.np/sitemap.xml
+Sitemap: https://pdfquill.vercel.app/sitemap.xml
