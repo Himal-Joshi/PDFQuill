@@ -2144,6 +2144,16 @@ function DocsView() {
               </div>
             </div>
 
+            <div className="mt-8 space-y-4">
+              <h4 className="font-bold text-slate-900 dark:text-white">Main Application Dashboard</h4>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                All 19 tools are arranged in an elegant, responsive grid. Simply click a tool to launch its interactive workspace.
+              </p>
+              <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 shadow-lg">
+                <img src={`${import.meta.env.BASE_URL}docs/dashboard_screenshot.png`} alt="PDFQuill Dashboard Screenshot" className="w-full h-auto object-cover" />
+              </div>
+            </div>
+
             <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/20 text-blue-800 dark:text-blue-300 text-sm flex gap-3 border border-blue-100 dark:border-blue-900/30">
               <AlertCircle className="flex-shrink-0 mt-0.5" size={18} />
               <div>
@@ -2261,6 +2271,16 @@ function DocsView() {
               <li>Click the primary <strong className="text-slate-900 dark:text-white">Merge PDF</strong> button. PDFQuill will merge the files locally inside your browser cache.</li>
               <li>Click <strong className="text-slate-900 dark:text-white">Download PDF</strong> to save the merged document to your computer.</li>
             </ol>
+
+            <div className="mt-8 space-y-4">
+              <h4 className="font-bold text-slate-900 dark:text-white">Workspace Interface</h4>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                The workspace features a drag-and-drop file upload zone, page list validation, and simple controls.
+              </p>
+              <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 shadow-lg">
+                <img src={`${import.meta.env.BASE_URL}docs/tool_page_screenshot.png`} alt="PDFQuill Merge Workspace" className="w-full h-auto object-cover" />
+              </div>
+            </div>
           </div>
         );
 
