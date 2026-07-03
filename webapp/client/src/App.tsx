@@ -238,10 +238,24 @@ type ViewType = 'main' | 'pricing' | 'solutions' | 'privacy' | 'terms' | 'login'
 
 const getInitialState = () => {
   if (typeof window === 'undefined') return { view: 'main' as ViewType, tool: null as Tool | null };
-  const hash = window.location.hash.slice(1);
-  if (!hash) return { view: 'main' as ViewType, tool: null as Tool | null };
-  if (hash.startsWith('tool/')) return { view: 'main' as ViewType, tool: hash.split('/')[1] as Tool };
-  return { view: hash as ViewType, tool: null as Tool | null };
+  let path = window.location.pathname;
+  if (path.length > 1 && path.endsWith('/')) {
+    path = path.slice(0, -1);
+  }
+  if (!path || path === '/') return { view: 'main' as ViewType, tool: null as Tool | null };
+  if (path.startsWith('/tool/')) {
+    const toolId = path.split('/')[2];
+    return { view: 'main' as ViewType, tool: (toolId || null) as Tool | null };
+  }
+  const viewName = path.slice(1) as ViewType;
+  return { view: viewName, tool: null as Tool | null };
+};
+
+const navigate = (path: string) => {
+  if (typeof window !== 'undefined') {
+    window.history.pushState(null, '', path);
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }
 };
 
 function App() {
@@ -249,13 +263,13 @@ function App() {
   const [activeTool, setActiveTool] = useState<Tool | null>(getInitialState().tool);
 
   useEffect(() => {
-    const handleHashChange = () => {
+    const handlePopState = () => {
       const state = getInitialState();
       setView(state.view);
       setActiveTool(state.tool);
     };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
   const [user, setUser] = useState<{ email: string; token: string } | null>(null);
 
@@ -381,7 +395,7 @@ function App() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    window.location.assign(`#tool/${tool}`);
+    navigate(`/tool/${tool}`);
     setFiles([]);
     setDownloadUrl('');
     setDownloadUrls([]);
@@ -398,7 +412,7 @@ function App() {
   };
 
   const goHome = () => {
-    window.location.assign('#');
+    navigate('/');
   };
 
   // Generate thumbnails when files change (for single-file PDF tools)
@@ -627,8 +641,8 @@ function App() {
 
           <div className="hidden md:flex items-center gap-8">
             <button onClick={goHome} className={cn("text-sm font-semibold transition-colors duration-200", (activeTool === null && view === 'main') ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Tools</button>
-            <button onClick={() => window.location.assign('#pricing')} className={cn("text-sm font-semibold transition-colors duration-200", view === 'pricing' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Pricing</button>
-            <button onClick={() => window.location.assign('#solutions')} className={cn("text-sm font-semibold transition-colors duration-200", view === 'solutions' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Solutions</button>
+            <button onClick={() => navigate('/pricing')} className={cn("text-sm font-semibold transition-colors duration-200", view === 'pricing' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Pricing</button>
+            <button onClick={() => navigate('/solutions')} className={cn("text-sm font-semibold transition-colors duration-200", view === 'solutions' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Solutions</button>
           </div>
 
           <div className="flex items-center gap-4">
@@ -646,8 +660,8 @@ function App() {
               </div>
             ) : (
               <>
-                <button onClick={() => window.location.assign('#login')} className="hidden sm:block btn btn-ghost">Login</button>
-                <button onClick={() => window.location.assign('#get-started')} className="btn btn-primary">Get Started</button>
+                <button onClick={() => navigate('/login')} className="hidden sm:block btn btn-ghost">Login</button>
+                <button onClick={() => navigate('/get-started')} className="btn btn-primary">Get Started</button>
               </>
             )}
           </div>
@@ -661,7 +675,7 @@ function App() {
             {view === 'solutions' && <SolutionsView />}
             {view === 'privacy' && <PrivacyView />}
             {view === 'terms' && <TermsView />}
-            {view === 'login' && <LoginView onLogin={(u) => { setUser(u); window.location.assign('#'); localStorage.setItem('user', JSON.stringify(u)); }} />}
+            {view === 'login' && <LoginView onLogin={(u) => { setUser(u); navigate('/'); localStorage.setItem('user', JSON.stringify(u)); }} />}
             {view === 'docs' && <DocsView />}
             {view === 'get-started' && <GetStartedView />}
             <button onClick={goHome} className="mt-12 btn btn-secondary">Back to Home</button>
@@ -693,10 +707,10 @@ function App() {
                     Merge, split, compress, and convert your documents with a premium toolkit designed for modern workflows. Fast, private, and 100% free.
                   </p>
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <button onClick={() => window.location.assign('#solutions')} className="btn btn-primary px-8 py-4 text-base w-full sm:w-auto">
+                    <button onClick={() => navigate('/solutions')} className="btn btn-primary px-8 py-4 text-base w-full sm:w-auto">
                       Explore All Tools
                     </button>
-                    <button onClick={() => window.location.assign('#docs')} className="btn btn-secondary px-8 py-4 text-base w-full sm:w-auto">
+                    <button onClick={() => navigate('/docs')} className="btn btn-secondary px-8 py-4 text-base w-full sm:w-auto">
                       View Documentation
                     </button>
                   </div>
@@ -1361,8 +1375,8 @@ function App() {
             <p className="text-xs font-medium text-slate-500">© {new Date().getFullYear()} PDFQuill Toolkit. Built for security & speed.</p>
           </div>
           <div className="flex flex-wrap justify-center gap-x-8 gap-y-4">
-            <button onClick={() => window.location.assign('#privacy')} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Privacy</button>
-            <button onClick={() => window.location.assign('#terms')} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Terms</button>
+            <button onClick={() => navigate('/privacy')} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Privacy</button>
+            <button onClick={() => navigate('/terms')} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Terms</button>
             <a className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest" href="https://github.com/Himal-Joshi/PDFQuill" target="_blank" rel="noopener noreferrer">Github</a>
             <a className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest" href="https://github.com/Himal-Joshi/PDFQuill" target="_blank" rel="noopener noreferrer">Contact</a>
           </div>
@@ -1913,7 +1927,7 @@ function PricingView({ user }: { user: { email: string; token: string } | null }
             <button
               onClick={() => {
                 if (!user) {
-                  window.location.assign('#login');
+                  navigate('/login');
                 } else if (plan.price !== 'Free') {
                   alert('Payments are disabled in the Beta version. Enjoy PDFQuill for free!');
                 }
@@ -2620,7 +2634,7 @@ function GetStartedView() {
         <div className="card p-10 bg-primary/5 border-primary/20">
           <h3 className="text-2xl font-bold mb-4 text-slate-900 dark:text-white">For Individuals</h3>
           <p className="text-slate-600 dark:text-slate-400 mb-8">Access all premium tools for free. No credit card required.</p>
-          <button onClick={() => window.location.assign('#login')} className="btn btn-primary w-full py-4">Create Free Account</button>
+          <button onClick={() => navigate('/login')} className="btn btn-primary w-full py-4">Create Free Account</button>
         </div>
         <div className="card p-10 bg-slate-50 dark:bg-slate-900">
           <h3 className="text-2xl font-bold mb-4 text-slate-900 dark:text-white">For Teams</h3>
