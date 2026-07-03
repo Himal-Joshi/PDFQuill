@@ -656,7 +656,7 @@ function App() {
 
       <main className="pt-20 pb-20 flex-1">
         {view !== 'main' ? (
-          <div className="px-6 py-20 max-w-4xl mx-auto">
+          <div className={cn("px-6 py-20 mx-auto", view === 'docs' ? "max-w-7xl" : "max-w-4xl")}>
             {view === 'pricing' && <PricingView user={user} />}
             {view === 'solutions' && <SolutionsView />}
             {view === 'privacy' && <PrivacyView />}
@@ -2055,28 +2055,407 @@ function LoginView({ onLogin }: { onLogin: (user: { email: string; token: string
 }
 
 function DocsView() {
+  const [selectedTopic, setSelectedTopic] = useState('Quick Start Guide');
+  const [searchQuery, setSearchQuery] = useState('');
+
   const sections = [
-    { title: 'Getting Started', topics: ['Quick Start Guide', 'System Requirements', 'Core Features Overview'] },
-    { title: 'PDF Tools', topics: ['Merging Documents', 'Splitting & Extracting', 'Compression Techniques', 'Security & Protection'] },
-    { title: 'API Reference', topics: ['Authentication', 'Endpoint Usage', 'Rate Limits', 'SDKs & Libraries'] },
+    {
+      title: 'Getting Started',
+      topics: [
+        { name: 'Quick Start Guide', icon: FileText, desc: 'Learn the basic workflow of PDFQuill.' },
+        { name: 'System Requirements', icon: Globe, desc: 'Technical specifications and browser compatibility.' },
+        { name: 'Core Features Overview', icon: Layers, desc: 'A quick tour of the 19 core PDF and image tools.' },
+      ]
+    },
+    {
+      title: 'PDF Tools',
+      topics: [
+        { name: 'Merging Documents', icon: Merge, desc: 'Combine multiple PDF files in any order.' },
+        { name: 'Splitting & Extracting', icon: Scissors, desc: 'Separate pages, color split, or extract ranges.' },
+        { name: 'Compression Techniques', icon: Minimize2, desc: 'Optimise file size without losing quality.' },
+        { name: 'Security & Protection', icon: Lock, desc: 'Encrypt, unlock, or flatten your documents.' },
+      ]
+    }
   ];
 
-  return (
-    <div>
-      <h2 className="text-4xl font-display font-extrabold mb-12 text-slate-900 dark:text-white">Documentation</h2>
-      <div className="grid gap-12">
-        {sections.map((s) => (
-          <div key={s.title}>
-            <h3 className="text-xl font-bold text-primary uppercase tracking-widest mb-6">{s.title}</h3>
+  // Flatten topics for searching and navigation
+  const allTopics = sections.flatMap(s => s.topics);
+
+  const filteredSections = sections.map(s => ({
+    ...s,
+    topics: s.topics.filter(t => 
+      t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.desc.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+  })).filter(s => s.topics.length > 0);
+
+  const activeTopic = allTopics.find(t => t.name === selectedTopic) || allTopics[0];
+
+  // Helper to render topic content
+  const renderTopicContent = (topicName: string) => {
+    switch (topicName) {
+      case 'Quick Start Guide':
+        return (
+          <div className="space-y-6 text-slate-700 dark:text-slate-300 leading-relaxed">
+            <p className="text-lg text-slate-900 dark:text-slate-100 font-medium">
+              Welcome to PDFQuill, the web's most elegant, private, and powerful client-side PDF toolkit. Follow these simple steps to start processing your documents.
+            </p>
+            
+            <div className="grid gap-6 mt-8">
+              {[
+                { step: '1', title: 'Select a Tool', text: 'Browse the dashboard and select the tool you need (e.g., Merge PDF, Compress PDF, AI OCR, etc.).' },
+                { step: '2', title: 'Upload Your Files', text: 'Drag and drop your PDF or image files directly into the upload zone, or click to browse files from your local device.' },
+                { step: '3', title: 'Adjust Parameters', text: 'Configure custom options for your files, such as split ranges, passwords, quality scales, or page numbers.' },
+                { step: '4', title: 'Process & Download', text: 'Click the primary action button to run the tool. Once processing is complete, download your new files instantly.' },
+              ].map((s) => (
+                <div key={s.step} className="flex gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg">
+                    {s.step}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-900 dark:text-white mb-1">{s.title}</h4>
+                    <p className="text-sm text-slate-600 dark:text-slate-400">{s.text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="my-8 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-900 shadow-xl">
+              <div className="p-2 border-b border-slate-800 flex items-center gap-2 bg-slate-950">
+                <span className="w-3.5 h-3.5 rounded-full bg-red-500/80 inline-block"></span>
+                <span className="w-3.5 h-3.5 rounded-full bg-yellow-500/80 inline-block"></span>
+                <span className="w-3.5 h-3.5 rounded-full bg-green-500/80 inline-block"></span>
+                <span className="text-xs text-slate-500 ml-2 font-mono">PDFQuill Client Console</span>
+              </div>
+              <div className="p-4 flex flex-col md:flex-row items-center gap-6">
+                <div className="flex-1 space-y-4">
+                  <div className="inline-flex items-center gap-2 text-xs font-semibold text-primary px-2.5 py-0.5 rounded-full bg-primary/15 border border-primary/20">
+                    <CheckCircle size={12} />
+                    100% Client-Side
+                  </div>
+                  <h4 className="text-xl font-bold text-white tracking-tight">Your Privacy is Guaranteed</h4>
+                  <p className="text-sm text-slate-400">
+                    PDFQuill processes everything on your device. We use cutting-edge client technologies (like WebAssembly and Canvas APIs) so your sensitive documents never traverse the internet.
+                  </p>
+                </div>
+                <div className="w-full md:w-48 h-36 bg-slate-950/50 rounded-xl overflow-hidden flex items-center justify-center border border-slate-800">
+                  <img src={`${import.meta.env.BASE_URL}docs/privacy_shield.png`} alt="Privacy Shield" className="h-full w-full object-cover" />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/20 text-blue-800 dark:text-blue-300 text-sm flex gap-3 border border-blue-100 dark:border-blue-900/30">
+              <AlertCircle className="flex-shrink-0 mt-0.5" size={18} />
+              <div>
+                <span className="font-bold">Pro Tip:</span> Guest users get 2 operations per day. Sign in with Google to raise your limit to 10 operations per day and preserve your app preferences!
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'System Requirements':
+        return (
+          <div className="space-y-6 text-slate-700 dark:text-slate-300 leading-relaxed">
+            <p className="text-lg text-slate-900 dark:text-slate-100 font-medium">
+              Because PDFQuill executes complex processing directly inside your browser instead of a backend server, certain modern web APIs are required.
+            </p>
+
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-8 mb-4">Supported Platforms</h3>
             <div className="grid sm:grid-cols-2 gap-4">
-              {s.topics.map((t) => (
-                <div key={t} className="card p-4 hover:border-primary/50 transition-colors cursor-pointer group">
-                  <span className="font-bold text-slate-900 dark:text-white group-hover:text-primary">{t}</span>
+              {[
+                { name: 'Google Chrome', status: 'Fully Supported', version: 'v92+' },
+                { name: 'Mozilla Firefox', status: 'Fully Supported', version: 'v90+' },
+                { name: 'Apple Safari', status: 'Fully Supported', version: 'v15+' },
+                { name: 'Microsoft Edge', status: 'Fully Supported', version: 'v92+' },
+              ].map((b) => (
+                <div key={b.name} className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 flex items-center justify-between shadow-sm">
+                  <div>
+                    <h5 className="font-bold text-slate-900 dark:text-white">{b.name}</h5>
+                    <span className="text-xs text-slate-500">{b.version}</span>
+                  </div>
+                  <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-1 rounded-md border border-emerald-200 dark:border-emerald-900/30">
+                    {b.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-8 mb-4">Under-the-Hood Technologies</h3>
+            <div className="space-y-4">
+              {[
+                { tech: 'WebAssembly (Wasm)', detail: 'Compiles low-level image and PDF processing code to run inside the browser at near-native speeds.' },
+                { tech: 'Canvas & WebGL', detail: 'Accelerates PDF page layout extraction, thumbnail generation, and rendering processes.' },
+                { tech: 'Tesseract.js OCR engine', detail: 'Runs text recognition models on your graphics hardware using Web Workers to prevent blocking UI interactivity.' },
+              ].map((t) => (
+                <div key={t.tech} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800/40">
+                  <h5 className="font-bold text-slate-900 dark:text-white mb-1">{t.tech}</h5>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">{t.detail}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/20 text-amber-800 dark:text-amber-300 text-sm flex gap-3 border border-amber-100 dark:border-amber-900/30">
+              <AlertCircle className="flex-shrink-0 mt-0.5" size={18} />
+              <div>
+                <span className="font-bold">Offline Working:</span> Once you load PDFQuill, the core features work entirely offline. Internet connection is only required initially to load the app and download language packs for OCR features.
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'Core Features Overview':
+        return (
+          <div className="space-y-6 text-slate-700 dark:text-slate-300 leading-relaxed">
+            <p className="text-lg text-slate-900 dark:text-slate-100 font-medium">
+              PDFQuill packages 19 high-performance document tools into a unified, lightweight interface. Here's a brief look at the core services:
+            </p>
+
+            <div className="grid sm:grid-cols-2 gap-4 mt-6">
+              {[
+                { title: 'PDF Assembly', items: ['Merge PDF (Combine files)', 'Split PDF (Ranges & Colors)', 'Organize Pages (Delete, reorder)'] },
+                { title: 'Conversion & Creation', items: ['Images to PDF (PNG, JPG)', 'PDF to Image (Extract as PNG)', 'HTML to PDF (Rich text output)', 'PDF to Markdown (Clean text extracts)'] },
+                { title: 'Optimisation', items: ['Compress PDF (Adjust sizes)', 'Rotate PDF (All or specifics)', 'Flatten PDF (Rasterize text/shapes)'] },
+                { title: 'Security & Protection', items: ['Lock PDF (Encrypt with password)', 'Unlock PDF (Decrypt / clear lock)', 'Watermark PDF (Embed text/images)'] },
+                { title: 'Advanced AI Tools', items: ['AI OCR (Make searchable)', 'AI OCR Extract (Get raw text)', 'AI Background Remover (Make transparent PNGs)'] },
+              ].map((cat) => (
+                <div key={cat.title} className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 shadow-sm hover:shadow-md transition-shadow">
+                  <h4 className="font-bold text-primary mb-3 text-sm uppercase tracking-wider">{cat.title}</h4>
+                  <ul className="space-y-1.5 text-sm text-slate-600 dark:text-slate-400">
+                    {cat.items.map((it) => (
+                      <li key={it} className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>
+                        {it}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               ))}
             </div>
           </div>
-        ))}
+        );
+
+      case 'Merging Documents':
+        return (
+          <div className="space-y-6 text-slate-700 dark:text-slate-300 leading-relaxed">
+            <p className="text-lg text-slate-900 dark:text-slate-100 font-medium">
+              Combine two or more PDF documents in any order you choose with our premium, high-performance Merger.
+            </p>
+
+            <div className="my-8 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-900 shadow-xl flex flex-col md:flex-row items-center gap-6 p-6">
+              <div className="flex-1 space-y-4">
+                <h4 className="text-xl font-bold text-white tracking-tight">Visual Assembly Pipeline</h4>
+                <p className="text-sm text-slate-400">
+                  When you upload multiple files into the Merge PDF tool, PDFQuill shows a grid of cards representing each document. You can drag and drop these blocks or use the navigation buttons to change their relative position before compiling.
+                </p>
+              </div>
+              <div className="w-full md:w-56 h-36 bg-slate-950/50 rounded-xl overflow-hidden flex items-center justify-center border border-slate-800">
+                <img src={`${import.meta.env.BASE_URL}docs/pdf_merge.png`} alt="PDF Merge Illustration" className="h-full w-full object-cover" />
+              </div>
+            </div>
+
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-8 mb-4">Step-by-Step Guide</h3>
+            <ol className="space-y-3 pl-5 list-decimal text-slate-600 dark:text-slate-400">
+              <li>Navigate to the homepage and select <strong className="text-slate-900 dark:text-white">Merge PDF</strong>.</li>
+              <li>Upload two or more PDF files using the drag-and-drop zone.</li>
+              <li>Use the visual cards to verify document order. Click <strong className="text-slate-900 dark:text-white">Move Up</strong> or <strong className="text-slate-900 dark:text-white">Move Down</strong> to adjust alignment.</li>
+              <li>Click the primary <strong className="text-slate-900 dark:text-white">Merge PDF</strong> button. PDFQuill will merge the files locally inside your browser cache.</li>
+              <li>Click <strong className="text-slate-900 dark:text-white">Download PDF</strong> to save the merged document to your computer.</li>
+            </ol>
+          </div>
+        );
+
+      case 'Splitting & Extracting':
+        return (
+          <div className="space-y-6 text-slate-700 dark:text-slate-300 leading-relaxed">
+            <p className="text-lg text-slate-900 dark:text-slate-100 font-medium">
+              Extract pages or separate entire documents using our high-speed splitting tool. PDFQuill offers three custom split modes:
+            </p>
+
+            <div className="grid gap-6 mt-6">
+              {[
+                { name: 'Split All Pages', desc: 'Converts a single PDF document of length N into N individual, separate PDF files. Ideal for separating draft chapters or slide sets.' },
+                { name: 'Custom Page Range', desc: 'Allows you to input specific pages and ranges (e.g., 1-3, 5, 8) to extract. Only those pages are compiled into a brand new output PDF.' },
+                { name: 'Color & B/W Split', desc: 'Automatically analyses each page inside the browser. It splits pages containing color artwork, colored text, or highlights from grayscale pages, and packs them into two separate PDF outputs.' },
+              ].map((m) => (
+                <div key={m.name} className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/60 shadow-sm">
+                  <h4 className="font-bold text-slate-900 dark:text-white mb-2">{m.name}</h4>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">{m.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/20 text-blue-800 dark:text-blue-300 text-sm flex gap-3 border border-blue-100 dark:border-blue-900/30">
+              <AlertCircle className="flex-shrink-0 mt-0.5" size={18} />
+              <div>
+                <span className="font-bold">Tip on Page Range Syntax:</span> Use commas to separate individual pages and dashes for ranges. For example: <code className="bg-white dark:bg-slate-900 px-1 py-0.5 rounded font-mono border border-slate-200 dark:border-slate-800">1-4, 7, 10-12</code> gets pages 1, 2, 3, 4, 7, 10, 11, and 12.
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'Compression Techniques':
+        return (
+          <div className="space-y-6 text-slate-700 dark:text-slate-300 leading-relaxed">
+            <p className="text-lg text-slate-900 dark:text-slate-100 font-medium">
+              Reduce large PDF sizes to make them email-friendly and optimized for web uploads. PDFQuill balances size savings with image clarity.
+            </p>
+
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-8 mb-4">Compression Profiles</h3>
+            <div className="space-y-4">
+              {[
+                { name: 'Low Compression (High Quality)', desc: 'Saves around 10-20% space. It strips redundant page layouts and metadata, but preserves original high-resolution photo dimensions.' },
+                { name: 'Medium Compression (Recommended)', desc: 'Saves around 40-60% space. It rescales larger photos to 150 DPI and applies intelligent JPEG compression. Best for general documents and slide shares.' },
+                { name: 'High Compression (Low Quality)', desc: 'Saves up to 80% space. It aggressively compresses photos to 72 DPI and downsamples all embedded visual assets. Best for plain text drafts and invoices.' },
+              ].map((p) => (
+                <div key={p.name} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800/40">
+                  <h5 className="font-bold text-slate-900 dark:text-white mb-1">{p.name}</h5>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">{p.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-300 text-sm flex gap-3 border border-emerald-100 dark:border-emerald-900/30">
+              <CheckCircle className="flex-shrink-0 mt-0.5" size={18} />
+              <div>
+                <span className="font-bold">No Server Compression Loss:</span> Unlike online upload portals, the compression is executed by compiling images and assets locally. This ensures your compressed document stays sharp and doesn't suffer artifacts from external server scaling.
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'Security & Protection':
+        return (
+          <div className="space-y-6 text-slate-700 dark:text-slate-300 leading-relaxed">
+            <p className="text-lg text-slate-900 dark:text-slate-100 font-medium">
+              PDFQuill provides high-grade browser-side cryptographic tools to secure, unlock, or flatten your PDF files.
+            </p>
+
+            <div className="my-8 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-900 shadow-xl flex flex-col md:flex-row items-center gap-6 p-6">
+              <div className="flex-1 space-y-4">
+                <h4 className="text-xl font-bold text-white tracking-tight">Standard Security Features</h4>
+                <p className="text-sm text-slate-400">
+                  Locking documents creates standard RC4/AES encrypted containers that prompt other viewers for credentials. Unlock mode removes these protections instantly using key vectors.
+                </p>
+              </div>
+              <div className="w-full md:w-56 h-36 bg-slate-950/50 rounded-xl overflow-hidden flex items-center justify-center border border-slate-800">
+                <img src={`${import.meta.env.BASE_URL}docs/ocr_extract.png`} alt="Security & Protection" className="h-full w-full object-cover" />
+              </div>
+            </div>
+
+            <div className="grid gap-6 mt-6">
+              {[
+                { name: 'Encrypting a PDF (Lock PDF)', detail: 'Protects the document structure with an owner password. This creates a secure layer requiring authentication from readers.' },
+                { name: 'Decrypting a PDF (Unlock PDF)', detail: 'Prompts for the active password and removes all security checks, printing limitations, and edit blocks.' },
+                { name: 'Flattening a PDF', detail: 'Converts all dynamic form fields, vectors, and typography fonts into a single flat image array per page. This removes all interactive elements and makes it impossible to copy-paste text.' },
+              ].map((s) => (
+                <div key={s.name} className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800/40">
+                  <h5 className="font-bold text-slate-900 dark:text-white mb-1">{s.name}</h5>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">{s.detail}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-4 rounded-xl bg-red-50 dark:bg-red-950/20 text-red-800 dark:text-red-300 text-sm flex gap-3 border border-red-100 dark:border-red-900/30">
+              <AlertCircle className="flex-shrink-0 mt-0.5" size={18} />
+              <div>
+                <span className="font-bold">Important Security Notice:</span> Since PDFQuill has no server storage database, we cannot recover password keys. If you encrypt a PDF and lose your password, there is no way for us to retrieve it. Always keep copies of passwords in a safe password manager!
+              </div>
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="relative">
+      <div className="absolute top-0 right-0 w-80 h-80 bg-primary/5 rounded-full blur-3xl -z-10"></div>
+      
+      <div className="flex flex-col lg:flex-row gap-10">
+        {/* Sidebar Nav */}
+        <div className="w-full lg:w-80 flex-shrink-0">
+          <div className="card p-6 sticky top-24 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/50 dark:border-slate-800/50 shadow-xl">
+            {/* Search */}
+            <div className="relative mb-6">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
+                <FileSearch size={18} />
+              </span>
+              <input
+                type="text"
+                placeholder="Search documentation..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+              />
+            </div>
+
+            {/* List */}
+            <div className="space-y-6">
+              {filteredSections.map((s) => (
+                <div key={s.title}>
+                  <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3 px-2">{s.title}</h4>
+                  <div className="space-y-1">
+                    {s.topics.map((t) => {
+                      const TopicIcon = t.icon;
+                      const isActive = selectedTopic === t.name;
+                      return (
+                        <button
+                          key={t.name}
+                          onClick={() => setSelectedTopic(t.name)}
+                          className={cn(
+                            "w-full text-left flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200",
+                            isActive 
+                              ? "bg-primary text-white shadow-md shadow-primary/20" 
+                              : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100"
+                          )}
+                        >
+                          <TopicIcon size={16} className={isActive ? "text-white" : "text-slate-400 group-hover:text-slate-600"} />
+                          <span className="truncate">{t.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              {filteredSections.length === 0 && (
+                <div className="text-center py-6 text-slate-400 dark:text-slate-500 text-sm">
+                  No matching documentation topics found.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Content Pane */}
+        <div className="flex-1 min-w-0">
+          <div className="card p-8 md:p-10 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200/50 dark:border-slate-800/50 shadow-xl min-h-[500px]">
+            <div className="flex items-center gap-3 text-primary font-bold text-xs uppercase tracking-wider mb-4 bg-primary/10 px-3 py-1 rounded-full w-fit">
+              {sections.find(s => s.topics.some(t => t.name === activeTopic.name))?.title}
+            </div>
+            
+            <h2 className="text-3xl font-display font-extrabold text-slate-900 dark:text-white mb-3 tracking-tight">
+              {activeTopic.name}
+            </h2>
+            <p className="text-slate-500 dark:text-slate-400 text-base mb-8 pb-6 border-b border-slate-200/50 dark:border-slate-800/50">
+              {activeTopic.desc}
+            </p>
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTopic.name}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.25 }}
+              >
+                {renderTopicContent(activeTopic.name)}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </div>
       </div>
     </div>
   );
