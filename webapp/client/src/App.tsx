@@ -2064,21 +2064,35 @@ function DocsView() {
       topics: [
         { name: 'Quick Start Guide', icon: FileText, desc: 'Learn the basic workflow of PDFQuill.' },
         { name: 'System Requirements', icon: Globe, desc: 'Technical specifications and browser compatibility.' },
-        { name: 'Core Features Overview', icon: Layers, desc: 'A quick tour of the 19 core PDF and image tools.' },
       ]
     },
     {
-      title: 'PDF Tools',
+      title: 'PDF Layout & Assembly',
       topics: [
         { name: 'Merging Documents', icon: Merge, desc: 'Combine multiple PDF files in any order.' },
         { name: 'Splitting & Extracting', icon: Scissors, desc: 'Separate pages, color split, or extract ranges.' },
+        { name: 'Organizing & Page Numbers', icon: Layers, desc: 'Reorder pages, delete pages, and add page numbers.' },
+        { name: 'Rotating Pages', icon: RotateCw, desc: 'Rotate PDF pages clockwise by a fixed angle.' },
+      ]
+    },
+    {
+      title: 'Optimization & Security',
+      topics: [
         { name: 'Compression Techniques', icon: Minimize2, desc: 'Optimise file size without losing quality.' },
-        { name: 'Security & Protection', icon: Lock, desc: 'Encrypt, unlock, or flatten your documents.' },
+        { name: 'Encryption & Flattening', icon: Lock, desc: 'Encrypt, decrypt, and flatten PDF files.' },
+        { name: 'Watermarking Documents', icon: Type, desc: 'Overlay text or image watermarks on your pages.' },
+      ]
+    },
+    {
+      title: 'AI & File Conversion',
+      topics: [
+        { name: 'AI OCR Text Processing', icon: ScanText, desc: 'Recognise and extract text from scanned documents.' },
+        { name: 'AI Background Remover', icon: Image, desc: 'Remove image backgrounds instantly in the browser.' },
+        { name: 'Format & Converters', icon: FileImage, desc: 'HTML to PDF, SVG to PNG, Images to PDF, and PDF to Markdown.' },
       ]
     }
   ];
 
-  // Flatten topics for searching and navigation
   const allTopics = sections.flatMap(s => s.topics);
 
   const filteredSections = sections.map(s => ({
@@ -2091,7 +2105,6 @@ function DocsView() {
 
   const activeTopic = allTopics.find(t => t.name === selectedTopic) || allTopics[0];
 
-  // Helper to render topic content
   const renderTopicContent = (topicName: string) => {
     switch (topicName) {
       case 'Quick Start Guide':
@@ -2213,37 +2226,6 @@ function DocsView() {
           </div>
         );
 
-      case 'Core Features Overview':
-        return (
-          <div className="space-y-6 text-slate-700 dark:text-slate-300 leading-relaxed">
-            <p className="text-lg text-slate-900 dark:text-slate-100 font-medium">
-              PDFQuill packages 19 high-performance document tools into a unified, lightweight interface. Here's a brief look at the core services:
-            </p>
-
-            <div className="grid sm:grid-cols-2 gap-4 mt-6">
-              {[
-                { title: 'PDF Assembly', items: ['Merge PDF (Combine files)', 'Split PDF (Ranges & Colors)', 'Organize Pages (Delete, reorder)'] },
-                { title: 'Conversion & Creation', items: ['Images to PDF (PNG, JPG)', 'PDF to Image (Extract as PNG)', 'HTML to PDF (Rich text output)', 'PDF to Markdown (Clean text extracts)'] },
-                { title: 'Optimisation', items: ['Compress PDF (Adjust sizes)', 'Rotate PDF (All or specifics)', 'Flatten PDF (Rasterize text/shapes)'] },
-                { title: 'Security & Protection', items: ['Lock PDF (Encrypt with password)', 'Unlock PDF (Decrypt / clear lock)', 'Watermark PDF (Embed text/images)'] },
-                { title: 'Advanced AI Tools', items: ['AI OCR (Make searchable)', 'AI OCR Extract (Get raw text)', 'AI Background Remover (Make transparent PNGs)'] },
-              ].map((cat) => (
-                <div key={cat.title} className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 shadow-sm hover:shadow-md transition-shadow">
-                  <h4 className="font-bold text-primary mb-3 text-sm uppercase tracking-wider">{cat.title}</h4>
-                  <ul className="space-y-1.5 text-sm text-slate-600 dark:text-slate-400">
-                    {cat.items.map((it) => (
-                      <li key={it} className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary inline-block"></span>
-                        {it}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-
       case 'Merging Documents':
         return (
           <div className="space-y-6 text-slate-700 dark:text-slate-300 leading-relaxed">
@@ -2304,10 +2286,76 @@ function DocsView() {
               ))}
             </div>
 
+            <div className="mt-8 space-y-4">
+              <h4 className="font-bold text-slate-900 dark:text-white">Color vs Black & White Separation</h4>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                After the Color/BW split operation processes, you will be presented with separate download links for each compiled document, allowing you to download them individually.
+              </p>
+              <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 shadow-lg">
+                <img src={`${import.meta.env.BASE_URL}docs/split_color_bw_result.png`} alt="Color vs BW Split results page" className="w-full h-auto object-cover" />
+              </div>
+            </div>
+
             <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/20 text-blue-800 dark:text-blue-300 text-sm flex gap-3 border border-blue-100 dark:border-blue-900/30">
               <AlertCircle className="flex-shrink-0 mt-0.5" size={18} />
               <div>
                 <span className="font-bold">Tip on Page Range Syntax:</span> Use commas to separate individual pages and dashes for ranges. For example: <code className="bg-white dark:bg-slate-900 px-1 py-0.5 rounded font-mono border border-slate-200 dark:border-slate-800">1-4, 7, 10-12</code> gets pages 1, 2, 3, 4, 7, 10, 11, and 12.
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'Organizing & Page Numbers':
+        return (
+          <div className="space-y-6 text-slate-700 dark:text-slate-300 leading-relaxed">
+            <p className="text-lg text-slate-900 dark:text-slate-100 font-medium">
+              Rearrange the structure of your documents or number them dynamically.
+            </p>
+
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-8 mb-4">1. Organize Pages</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Reorder pages by dragging thumbnails into place, or select individual pages to delete them. This enables you to compile final drafts or edit out blank pages locally.
+            </p>
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800/40">
+              <span className="font-bold text-slate-900 dark:text-white">Action Steps:</span>
+              <ul className="list-disc pl-5 mt-2 space-y-1.5 text-sm text-slate-600 dark:text-slate-400">
+                <li>Upload your PDF file.</li>
+                <li>Hold and drag page thumbnails to reorder pages in the workspace grid.</li>
+                <li>Hover over a page and click the trash icon to delete a page.</li>
+                <li>Click <strong className="text-slate-900 dark:text-white">Start Organize Pages</strong> to finalize.</li>
+              </ul>
+            </div>
+
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-8 mb-4">2. Page Numbers</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Inject page numbers to the bottom center of each sheet. PDFQuill automatically reads page sizes (such as Letter, A4, or Legal) and calculates coordinate overlays dynamically.
+            </p>
+          </div>
+        );
+
+      case 'Rotating Pages':
+        return (
+          <div className="space-y-6 text-slate-700 dark:text-slate-300 leading-relaxed">
+            <p className="text-lg text-slate-900 dark:text-slate-100 font-medium">
+              Rotate PDF pages by custom orientation offsets. This is ideal for correcting scanned documents or landscape sheets.
+            </p>
+
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-8 mb-4">Rotation Angles</h3>
+            <ul className="space-y-2 text-slate-600 dark:text-slate-400 list-disc pl-5">
+              <li><strong className="text-slate-900 dark:text-white">90 Degrees Clockwise</strong>: Rotates page clockwise into landscape.</li>
+              <li><strong className="text-slate-900 dark:text-white">180 Degrees</strong>: Flips the page upside down.</li>
+              <li><strong className="text-slate-900 dark:text-white">270 Degrees</strong>: Rotates page counter-clockwise.</li>
+            </ul>
+
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-8 mb-4">Rotation Modes</h3>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 shadow-sm">
+                <h5 className="font-bold text-slate-900 dark:text-white mb-1">Rotate All Pages</h5>
+                <p className="text-xs text-slate-500">Applies the selected rotation offset to every single page in the uploaded PDF document.</p>
+              </div>
+              <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 shadow-sm">
+                <h5 className="font-bold text-slate-900 dark:text-white mb-1">Specific Pages Only</h5>
+                <p className="text-xs text-slate-500">Input specific page indexes (e.g., 1, 3, 5) to rotate target sheets while leaving other pages untouched.</p>
               </div>
             </div>
           </div>
@@ -2334,6 +2382,16 @@ function DocsView() {
               ))}
             </div>
 
+            <div className="mt-8 space-y-4">
+              <h4 className="font-bold text-slate-900 dark:text-white">Compression Statistics</h4>
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                PDFQuill shows your compressed file size stats and renders interactive page thumbnail previews, keeping the entire process fast and visual.
+              </p>
+              <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/40 shadow-lg">
+                <img src={`${import.meta.env.BASE_URL}docs/compress_result.png`} alt="Compression results stats page" className="w-full h-auto object-cover" />
+              </div>
+            </div>
+
             <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 text-emerald-800 dark:text-emerald-300 text-sm flex gap-3 border border-emerald-100 dark:border-emerald-900/30">
               <CheckCircle className="flex-shrink-0 mt-0.5" size={18} />
               <div>
@@ -2343,7 +2401,7 @@ function DocsView() {
           </div>
         );
 
-      case 'Security & Protection':
+      case 'Encryption & Flattening':
         return (
           <div className="space-y-6 text-slate-700 dark:text-slate-300 leading-relaxed">
             <p className="text-lg text-slate-900 dark:text-slate-100 font-medium">
@@ -2384,6 +2442,86 @@ function DocsView() {
           </div>
         );
 
+      case 'Watermarking Documents':
+        return (
+          <div className="space-y-6 text-slate-700 dark:text-slate-300 leading-relaxed">
+            <p className="text-lg text-slate-900 dark:text-slate-100 font-medium">
+              Protect your intellectual property or label your files using PDFQuill's Watermark Tool.
+            </p>
+
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-8 mb-4">Watermark Configurations</h3>
+            <ul className="space-y-2.5 text-slate-600 dark:text-slate-400 list-disc pl-5 text-sm">
+              <li><strong className="text-slate-900 dark:text-white">Text Watermarks</strong>: Add plain custom labels like "DRAFT", "CONFIDENTIAL", or your company name. Customize font size, rotation angle (degrees), opacity transparency, and placement position.</li>
+              <li><strong className="text-slate-900 dark:text-white">Image Watermarks</strong>: Upload custom PNG/JPG stamps or logos and superimpose them directly onto the PDF canvas layers.</li>
+            </ul>
+          </div>
+        );
+
+      case 'AI OCR Text Processing':
+        return (
+          <div className="space-y-6 text-slate-700 dark:text-slate-300 leading-relaxed">
+            <p className="text-lg text-slate-900 dark:text-slate-100 font-medium">
+              PDFQuill packages state-of-the-art client-side Optical Character Recognition (OCR) engines using WebAssembly.
+            </p>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 shadow-sm">
+                <h5 className="font-bold text-slate-900 dark:text-white mb-1">OCR — Make Searchable</h5>
+                <p className="text-xs text-slate-500">Injects an invisible, selectable text layer directly beneath your scanned images or document graphics. Allows you to search, highlight, and copy text from raw scans.</p>
+              </div>
+              <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 shadow-sm">
+                <h5 className="font-bold text-slate-900 dark:text-white mb-1">OCR — Extract Text</h5>
+                <p className="text-xs text-slate-500">Parses the text out of the document completely and lists the contents in an inline text area container with confidence scores.</p>
+              </div>
+            </div>
+
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-8 mb-4">Advanced Model Features</h3>
+            <ul className="list-disc pl-5 space-y-2 text-sm text-slate-600 dark:text-slate-400">
+              <li><strong className="text-slate-900 dark:text-white">Multi-language support</strong>: Includes packages for English (default), Spanish, French, German, Chinese, and Hindi.</li>
+              <li><strong className="text-slate-900 dark:text-white">Auto-rotation correction</strong>: Automatically rotates skewed document sheets before applying text extraction.</li>
+              <li><strong className="text-slate-900 dark:text-white">QR Code & Table Detection</strong>: Identifies QR payloads and extracts table bounds.</li>
+            </ul>
+          </div>
+        );
+
+      case 'AI Background Remover':
+        return (
+          <div className="space-y-6 text-slate-700 dark:text-slate-300 leading-relaxed">
+            <p className="text-lg text-slate-900 dark:text-slate-100 font-medium">
+              Remove image backgrounds instantly in your browser using local machine learning models (ONNX runtime via WebGL).
+            </p>
+
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-8 mb-4">How it Works</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Upon choosing a JPEG/PNG, the background removal engine loads a highly optimized image matting model. It separates foreground subjects from their backdrops in real-time, outputting transparent PNG images without sending any details to a server.
+            </p>
+          </div>
+        );
+
+      case 'Format & Converters':
+        return (
+          <div className="space-y-6 text-slate-700 dark:text-slate-300 leading-relaxed">
+            <p className="text-lg text-slate-900 dark:text-slate-100 font-medium">
+              Easily convert between documents, images, web files, and markup files.
+            </p>
+
+            <div className="grid gap-4 mt-6">
+              {[
+                { name: 'Images to PDF', desc: 'Turn multiple PNG, JPG, or WebP images into a single compiled PDF file. Drag and drop thumbnails to sort the page order before saving.' },
+                { name: 'PDF to Image', desc: 'Rasterizes each page of a PDF file into high-resolution PNG images. Download as a zip file containing the image series.' },
+                { name: 'SVG to PNG', desc: 'Converts vector SVG graphics into editable rasterized PNG coordinates, with custom scale adjustments.' },
+                { name: 'HTML to PDF', desc: 'Convert web code, HTML files, or rich texts directly into formatted PDF structures using standard rendering dimensions.' },
+                { name: 'PDF to Markdown (AI Ready)', desc: 'Converts standard PDFs to clean, structured markdown strings. It preserves headings, bullet lists, bold text, and layout blocks — optimized for copying directly into LLM prompts.' },
+              ].map((c) => (
+                <div key={c.name} className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 shadow-sm">
+                  <h5 className="font-bold text-slate-900 dark:text-white mb-1">{c.name}</h5>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">{c.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+
       default:
         return null;
     }
@@ -2392,12 +2530,9 @@ function DocsView() {
   return (
     <div className="relative">
       <div className="absolute top-0 right-0 w-80 h-80 bg-primary/5 rounded-full blur-3xl -z-10"></div>
-      
       <div className="flex flex-col lg:flex-row gap-10">
-        {/* Sidebar Nav */}
         <div className="w-full lg:w-80 flex-shrink-0">
           <div className="card p-6 sticky top-24 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/50 dark:border-slate-800/50 shadow-xl">
-            {/* Search */}
             <div className="relative mb-6">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
                 <FileSearch size={18} />
@@ -2410,8 +2545,6 @@ function DocsView() {
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
               />
             </div>
-
-            {/* List */}
             <div className="space-y-6">
               {filteredSections.map((s) => (
                 <div key={s.title}>
@@ -2439,7 +2572,6 @@ function DocsView() {
                   </div>
                 </div>
               ))}
-
               {filteredSections.length === 0 && (
                 <div className="text-center py-6 text-slate-400 dark:text-slate-500 text-sm">
                   No matching documentation topics found.
@@ -2448,21 +2580,17 @@ function DocsView() {
             </div>
           </div>
         </div>
-
-        {/* Content Pane */}
         <div className="flex-1 min-w-0">
           <div className="card p-8 md:p-10 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200/50 dark:border-slate-800/50 shadow-xl min-h-[500px]">
             <div className="flex items-center gap-3 text-primary font-bold text-xs uppercase tracking-wider mb-4 bg-primary/10 px-3 py-1 rounded-full w-fit">
               {sections.find(s => s.topics.some(t => t.name === activeTopic.name))?.title}
             </div>
-            
             <h2 className="text-3xl font-display font-extrabold text-slate-900 dark:text-white mb-3 tracking-tight">
               {activeTopic.name}
             </h2>
             <p className="text-slate-500 dark:text-slate-400 text-base mb-8 pb-6 border-b border-slate-200/50 dark:border-slate-800/50">
               {activeTopic.desc}
             </p>
-
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTopic.name}
