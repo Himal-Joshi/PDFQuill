@@ -3,5 +3,11 @@
     "api/*.py": {
       "maxDuration": 30
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/((?!api/|assets/|docs/|logo.svg|icons.svg|robots.txt|sitemap.xml|og-image.png).*)",
+      "destination": "/index.html"
+    }
+  ]
 }
