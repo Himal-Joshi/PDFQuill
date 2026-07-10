@@ -17,6 +17,9 @@ import {
   Loader2,
   Merge,
   Minimize2,
+  Maximize2,
+  ChevronLeft,
+  ChevronRight,
   RotateCw,
   ScanText,
   Scissors,
@@ -37,6 +40,7 @@ import {
 import { AnimatePresence, motion } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { PDFDocument } from 'pdf-lib';
 import { mergePdfs, splitPdf, compressPdf, rotatePdf, watermarkPdf, addPageNumbers, organizePdf, imagesToPdf, pdfToImages, compressImages, flattenPdf, protectPdf, unlockPdf, type ConversionResult } from './lib/pdfProcessing';
 import { removeBackground, svgToPng, type ImageRemovalPreview, type ImageRemovalResult } from './lib/imageProcessing';
 import { ocrMakeSearchable, ocrExtractText, OCR_LANGUAGES, type OcrProgress, type OcrTextResult } from './lib/ocrProcessing';
@@ -45,7 +49,7 @@ import { pdfToMarkdown, type MarkdownResult } from './lib/pdfToMdProcessing';
 import { auth, googleProvider } from './lib/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 
-import { generateThumbnails, type PageThumbnail } from './lib/pdfThumbnails';
+import { generateThumbnails, getPageImage, type PageThumbnail } from './lib/pdfThumbnails';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -261,6 +265,8 @@ const navigate = (path: string) => {
 function App() {
   const [view, setView] = useState<ViewType>(getInitialState().view);
   const [activeTool, setActiveTool] = useState<Tool | null>(getInitialState().tool);
+  const [landingFile, setLandingFile] = useState<File | null>(null);
+  const [landingDragActive, setLandingDragActive] = useState(false);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -328,6 +334,9 @@ function App() {
   const [watermarkText, setWatermarkText] = useState('DRAFT');
   const [watermarkImage, setWatermarkImage] = useState<File | null>(null);
   const [organizeAction, setOrganizeAction] = useState<'reorder' | 'delete'>('reorder');
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [highResPreview, setHighResPreview] = useState<string | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [imageQuality, setImageQuality] = useState(0.75);
   const [imageScale, setImageScale] = useState(1.0);
   const [downloadExtension, setDownloadExtension] = useState('pdf');
@@ -395,8 +404,16 @@ function App() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
+    setActiveTool(tool);
     navigate(`/tool/${tool}`);
-    setFiles([]);
+    
+    if (landingFile) {
+      setFiles([landingFile]);
+      setLandingFile(null);
+    } else {
+      setFiles([]);
+    }
+    
     setDownloadUrl('');
     setDownloadUrls([]);
     setError('');
@@ -413,6 +430,48 @@ function App() {
 
   const goHome = () => {
     navigate('/');
+  };
+
+  const handleDownloadPreviewPdf = async () => {
+    if (previewIndex === null || !files[0] || !thumbnails[previewIndex]) return;
+    try {
+      const arrayBuffer = await files[0].arrayBuffer();
+      const sourceDoc = await PDFDocument.load(arrayBuffer);
+      const newDoc = await PDFDocument.create();
+      const [copiedPage] = await newDoc.copyPages(sourceDoc, [thumbnails[previewIndex].pageNumber - 1]);
+      newDoc.addPage(copiedPage);
+      const pdfBytes = await newDoc.save();
+      
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `page-${thumbnails[previewIndex].pageNumber}-${files[0].name}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDownloadPreviewPng = async () => {
+    if (previewIndex === null || !files[0] || !thumbnails[previewIndex]) return;
+    try {
+      let dataUrl = highResPreview;
+      if (!dataUrl) {
+        dataUrl = await getPageImage(files[0], thumbnails[previewIndex].pageNumber, 2000);
+      }
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = `page-${thumbnails[previewIndex].pageNumber}-${files[0].name.replace(/\.[^/.]+$/, "")}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   // Generate thumbnails when files change (for single-file PDF tools)
@@ -435,6 +494,31 @@ function App() {
       Promise.resolve().then(() => setThumbnails([]));
     }
   }, [files, activeTool]);
+
+  // Fetch high-res image when preview index changes
+  useEffect(() => {
+    if (previewIndex === null || !files[0] || !thumbnails[previewIndex]) {
+      setHighResPreview(null);
+      return;
+    }
+    
+    let isMounted = true;
+    setIsLoadingPreview(true);
+    
+    getPageImage(files[0], thumbnails[previewIndex].pageNumber)
+      .then((dataUrl) => {
+        if (isMounted) {
+          setHighResPreview(dataUrl);
+          setIsLoadingPreview(false);
+        }
+      })
+      .catch(err => {
+        console.error('Failed to load high-res preview:', err);
+        if (isMounted) setIsLoadingPreview(false);
+      });
+      
+    return () => { isMounted = false; };
+  }, [previewIndex, files, thumbnails]);
 
   // Clean up object URLs created during background removal to prevent memory leaks
   useEffect(() => {
@@ -625,6 +709,35 @@ function App() {
   const needsPageRange = activeTool === 'organize' || (activeTool === 'split' && splitMode === 'range') || (activeTool === 'rotate' && rotationMode === 'specific');
   const canProcess = !loading && (!needsPageRange || pageRange.trim().length > 0 || rotationPages.trim().length > 0) && (files.length > 0 || (activeTool === 'html-to-pdf' && htmlContent.trim().length > 0));
 
+  const filteredTools = tools.filter(tool => {
+    if (!landingFile) return true;
+    const isImage = landingFile.type.startsWith('image/');
+    const isPdf = landingFile.type === 'application/pdf';
+    const isHtml = landingFile.type === 'text/html';
+    const isSvg = landingFile.type === 'image/svg+xml';
+    
+    if (isImage && !isSvg) return tool.acceptsImages;
+    if (isPdf) return !tool.acceptsImages || tool.id === 'pdf-to-image';
+    if (isSvg) return tool.id === 'svg-to-png';
+    if (isHtml) return tool.id === 'html-to-pdf';
+    return false;
+  });
+
+  const toolGroups = [
+    {
+      title: "Edit & Organize",
+      tools: filteredTools.filter(t => ['merge', 'split', 'rotate', 'watermark', 'page-numbers', 'organize', 'flatten-pdf', 'protect-pdf', 'unlock-pdf'].includes(t.id))
+    },
+    {
+      title: "Convert & Compress",
+      tools: filteredTools.filter(t => ['compress', 'convert', 'pdf-to-image', 'compress-image', 'html-to-pdf', 'svg-to-png', 'pdf-to-markdown'].includes(t.id))
+    },
+    {
+      title: "AI & Extraction",
+      tools: filteredTools.filter(t => ['remove-bg', 'ocr', 'ocr-extract'].includes(t.id))
+    }
+  ];
+
   return (
     <div className="min-h-screen selection:bg-primary/20 selection:text-primary">
       {/* Top Navigation Bar */}
@@ -700,54 +813,152 @@ function App() {
                   <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
                     Merge, split, compress, and convert your documents with a premium toolkit designed for modern workflows. Fast, private, and 100% free.
                   </p>
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                    <button onClick={() => navigate('/solutions')} className="btn btn-primary px-8 py-4 text-base w-full sm:w-auto">
+                  
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+                    <button onClick={() => document.getElementById('tools-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="btn btn-primary px-8 py-4 text-base w-full sm:w-auto">
                       Explore All Tools
                     </button>
                     <button onClick={() => navigate('/docs')} className="btn btn-secondary px-8 py-4 text-base w-full sm:w-auto">
                       View Documentation
                     </button>
                   </div>
+                  
+                  <div 
+                    className={cn(
+                      "w-full max-w-2xl mx-auto p-8 min-h-[200px] flex flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-all duration-300 relative bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm",
+                      landingDragActive ? "border-primary bg-primary/5 scale-105" : "border-slate-300 dark:border-slate-700 hover:border-primary/50"
+                    )}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setLandingDragActive(true); }}
+                    onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setLandingDragActive(false); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setLandingDragActive(false);
+                      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                        setLandingFile(e.dataTransfer.files[0]);
+                      }
+                    }}
+                  >
+                    <input 
+                      type="file" 
+                      className="hidden" 
+                      id="landing-file-upload" 
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          setLandingFile(e.target.files[0]);
+                        }
+                      }}
+                    />
+                    
+                    {landingFile ? (
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 w-full min-w-0">
+                        <div className="flex items-center bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 w-full min-w-0">
+                          <div className="flex items-center gap-4 overflow-hidden w-full min-w-0">
+                            <div className="p-3 bg-primary/10 text-primary rounded-lg shrink-0">
+                              {landingFile.type.startsWith('image/') ? <FileImage size={24} /> : <FileText size={24} />}
+                            </div>
+                            <div className="text-left truncate flex-1 min-w-0">
+                              <p className="font-semibold text-slate-900 dark:text-white truncate">{landingFile.name}</p>
+                              <p className="text-xs text-slate-500">{(landingFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                            </div>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); setLandingFile(null); const el = document.getElementById('landing-file-upload') as HTMLInputElement; if(el) el.value = ''; }}
+                              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors shrink-0"
+                            >
+                              <X size={20} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <label htmlFor="landing-file-upload" className="flex flex-col items-center justify-center cursor-pointer gap-4">
+                        <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center shadow-inner">
+                          <Upload size={32} />
+                        </div>
+                        <div>
+                          <p className="text-lg font-semibold text-slate-900 dark:text-white mb-1">
+                            Drag & drop a file here to start
+                          </p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400">
+                            or click to browse from your computer
+                          </p>
+                        </div>
+                      </label>
+                    )}
+                  </div>
+                  
+                  {landingFile && filteredTools.length > 0 && (
+                    <div className="mt-6 text-sm font-semibold text-primary animate-pulse">
+                      Scroll down to select a tool &darr;
+                    </div>
+                  )}
                 </motion.div>
               </div>
             </section>
 
             {/* Tool Grid */}
-            <section className="py-12 px-6 max-w-7xl mx-auto w-full">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {tools.map((tool, i) => (
-                  <motion.div
-                    key={tool.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: i * 0.1 }}
-                    onClick={() => selectTool(tool.id)}
-                    className="group card cursor-pointer relative overflow-hidden"
-                  >
-                    {tool.requiresUser && !user && (
-                      <div className="absolute top-4 right-4 text-slate-400 dark:text-slate-500 z-20">
-                        <Lock size={20} />
-                      </div>
-                    )}
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-bl-[100px] -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-500"></div>
+            <section id="tools-grid" className="py-12 px-6 max-w-7xl mx-auto w-full">
+              {landingFile && (
+                <div className="mb-8 text-center">
+                  <h2 className="text-2xl font-display font-bold text-slate-900 dark:text-white">
+                    Suggested tools for your file
+                  </h2>
+                </div>
+              )}
+              <div className="flex flex-col gap-12">
+                {filteredTools.length === 0 ? (
+                  <div className="col-span-full py-12 text-center bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700">
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">No tools support this file format yet</h3>
+                    <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+                      We're always adding new features. Stay tuned and try our other PDF, Image, and OCR tools!
+                    </p>
+                  </div>
+                ) : (
+                  toolGroups.map(group => group.tools.length > 0 && (
+                    <div key={group.title}>
+                      {!landingFile && (
+                        <h2 className="text-2xl font-display font-bold text-slate-900 dark:text-white mb-6 border-b border-slate-200 dark:border-slate-800 pb-2">
+                          {group.title}
+                        </h2>
+                      )}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {group.tools.map((tool, i) => (
+                          <motion.div
+                            key={tool.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: i * 0.1 }}
+                            onClick={() => selectTool(tool.id)}
+                            className="group card cursor-pointer relative overflow-hidden"
+                          >
+                            {tool.requiresUser && !user && (
+                              <div className="absolute top-4 right-4 text-slate-400 dark:text-slate-500 z-20">
+                                <Lock size={20} />
+                              </div>
+                            )}
+                            <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-bl-[100px] -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-500"></div>
 
-                    <div className="relative z-10">
-                      <div className="w-14 h-14 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center mb-6 group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-sm">
-                        <tool.lucideIcon size={28} strokeWidth={1.5} />
-                      </div>
-                      <h3 className="font-display text-xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-primary transition-colors">
-                        {tool.label}
-                      </h3>
-                      <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                        {tool.description}
-                      </p>
+                            <div className="relative z-10">
+                              <div className="w-14 h-14 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center mb-6 group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-sm">
+                                <tool.lucideIcon size={28} strokeWidth={1.5} />
+                              </div>
+                              <h3 className="font-display text-xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-primary transition-colors">
+                                {tool.label}
+                              </h3>
+                              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                                {tool.description}
+                              </p>
 
-                      <div className="mt-8 flex items-center text-xs font-bold text-primary opacity-0 group-hover:opacity-100 -translate-x-4 group-hover:translate-x-0 transition-all duration-300">
-                        TRY IT NOW <ArrowLeft className="ml-2 rotate-180" size={14} />
+                              <div className="mt-8 flex items-center text-xs font-bold text-primary opacity-0 group-hover:opacity-100 -translate-x-4 group-hover:translate-x-0 transition-all duration-300">
+                                TRY IT NOW <ArrowLeft className="ml-2 rotate-180" size={14} />
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))}
                       </div>
                     </div>
-                  </motion.div>
-                ))}
+                  ))
+                )}
               </div>
             </section>
           </div>
@@ -918,9 +1129,17 @@ function App() {
                     transition={{ delay: 0.15 }}
                     className="card p-6"
                   >
-                    <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-6">
-                      Page Preview
-                    </h3>
+                    <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                        Page Preview
+                      </h3>
+                      {activeTool === 'organize' && organizeAction === 'reorder' && (
+                        <p className="text-sm text-primary bg-primary/10 px-3 py-1.5 rounded-md flex items-center gap-2 font-medium">
+                          <AlertCircle size={16} />
+                          You can also drag pages in page preview to organize in order
+                        </p>
+                      )}
+                    </div>
                     {loadingThumbnails ? (
                       <div className="flex flex-col items-center justify-center py-12 gap-3">
                         <Loader2 className="animate-spin text-primary" size={32} />
@@ -941,13 +1160,19 @@ function App() {
                               activeTool === 'organize' && organizeAction === 'reorder' && "cursor-grab active:cursor-grabbing"
                             )}
                           >
-                            <div className="relative rounded-xl border-2 border-slate-100 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900 shadow-sm hover:border-primary/40 hover:shadow-md transition-all duration-200">
+                            <div 
+                              className="relative rounded-xl border-2 border-slate-100 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900 shadow-sm hover:border-primary/40 hover:shadow-md transition-all duration-200 cursor-pointer group/overlay"
+                              onClick={() => setPreviewIndex(index)}
+                            >
                               <img
                                 src={thumb.dataUrl}
                                 alt={`Page ${thumb.pageNumber}`}
                                 className="w-full h-auto block"
                                 loading="lazy"
                               />
+                              <div className="absolute inset-0 bg-black/0 group-hover/overlay:bg-black/20 transition-colors flex items-center justify-center">
+                                <Maximize2 className="text-white opacity-0 group-hover/overlay:opacity-100 transition-opacity drop-shadow-md" size={32} />
+                              </div>
                             </div>
                             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 group-hover/thumb:text-primary transition-colors">
                               {thumb.pageNumber}
@@ -960,6 +1185,116 @@ function App() {
                     )}
                   </motion.div>
                 )}
+
+                {/* Page Preview Modal */}
+                <AnimatePresence>
+                  {previewIndex !== null && thumbnails[previewIndex] && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/95 backdrop-blur-sm"
+                      onClick={() => setPreviewIndex(null)}
+                    >
+                      <div className="absolute top-4 sm:top-6 left-4 sm:left-6 text-white font-medium bg-slate-800/80 px-3 sm:px-4 py-2 rounded-lg border border-slate-700 shadow-lg z-10 max-w-[45vw] sm:max-w-[60vw] truncate text-xs sm:text-base">
+                        Page Preview for {files[0]?.name}
+                      </div>
+                      
+                      <div className="absolute top-4 sm:top-6 right-4 sm:right-6 flex items-center gap-2 sm:gap-3 z-10">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleDownloadPreviewPdf(); }} 
+                          className="flex items-center gap-2 px-2 sm:px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 shadow transition-all text-xs sm:text-sm font-medium"
+                          title="Download PDF Page"
+                        >
+                          <Download size={16} /> <span className="hidden sm:inline">PDF</span>
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleDownloadPreviewPng(); }} 
+                          className="flex items-center gap-2 px-2 sm:px-3 py-2 bg-white text-slate-800 rounded-lg hover:bg-slate-100 shadow transition-all text-xs sm:text-sm font-medium"
+                          title="Download PNG Image"
+                        >
+                          <Download size={16} /> <span className="hidden sm:inline">PNG</span>
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setPreviewIndex(null); }}
+                          className="p-2 text-white/70 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-all shadow border border-slate-700 ml-1 sm:ml-2"
+                        >
+                          <X size={20} />
+                        </button>
+                      </div>
+
+                      {/* Desktop Side Arrows */}
+                      {previewIndex > 0 && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setPreviewIndex(previewIndex - 1); }}
+                          className="hidden sm:flex absolute left-6 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-all z-10"
+                        >
+                          <ChevronLeft size={32} />
+                        </button>
+                      )}
+                      
+                      <motion.div 
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0.9, opacity: 0 }}
+                        className="relative max-w-[95vw] max-h-[85vh] sm:max-h-[95vh] flex flex-col items-center pb-16 sm:pb-0"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="relative flex items-center justify-center min-h-[40vh] sm:min-h-[50vh] min-w-[50vw]">
+                          {isLoadingPreview && !highResPreview && (
+                            <div className="absolute inset-0 flex items-center justify-center z-10 bg-slate-900/20 backdrop-blur-sm rounded-lg">
+                              <Loader2 className="animate-spin text-white" size={48} />
+                            </div>
+                          )}
+                          <img 
+                            src={highResPreview || thumbnails[previewIndex].dataUrl} 
+                            alt={`Page ${thumbnails[previewIndex].pageNumber}`}
+                            className={cn(
+                              "max-w-[90vw] max-h-[80vh] sm:max-h-[90vh] object-contain rounded-lg shadow-2xl bg-white transition-opacity duration-300",
+                              isLoadingPreview && !highResPreview ? "opacity-50 blur-sm" : "opacity-100"
+                            )}
+                          />
+                        </div>
+                        
+                        {/* Desktop Page Number */}
+                        <div className="hidden sm:block mt-6 px-6 py-2 bg-slate-800 rounded-full text-white font-medium text-sm border border-slate-700 shadow-lg">
+                          Page {thumbnails[previewIndex].pageNumber} of {thumbnails.length}
+                        </div>
+                      </motion.div>
+                      
+                      {/* Mobile Bottom Navigation Bar */}
+                      <div className="sm:hidden fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center justify-between w-[90vw] max-w-sm bg-slate-800/95 backdrop-blur px-4 py-2 rounded-full border border-slate-700 shadow-2xl z-20">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setPreviewIndex(previewIndex - 1); }}
+                          disabled={previewIndex === 0}
+                          className="p-3 text-white/70 hover:text-white disabled:opacity-30 transition-all rounded-full hover:bg-white/10"
+                        >
+                          <ChevronLeft size={28} />
+                        </button>
+                        <div className="text-white font-medium text-sm">
+                          Page {thumbnails[previewIndex].pageNumber} of {thumbnails.length}
+                        </div>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setPreviewIndex(previewIndex + 1); }}
+                          disabled={previewIndex === thumbnails.length - 1}
+                          className="p-3 text-white/70 hover:text-white disabled:opacity-30 transition-all rounded-full hover:bg-white/10"
+                        >
+                          <ChevronRight size={28} />
+                        </button>
+                      </div>
+
+                      {/* Desktop Side Arrows */}
+                      {previewIndex < thumbnails.length - 1 && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setPreviewIndex(previewIndex + 1); }}
+                          className="hidden sm:flex absolute right-6 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-all z-10"
+                        >
+                          <ChevronRight size={32} />
+                        </button>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {/* Previews & Downloads (Wide Layout) */}
                 <AnimatePresence>
