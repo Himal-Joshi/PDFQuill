@@ -35,6 +35,7 @@ import {
   Unlock,
   PlayCircle,
   X,
+  Coffee,
   type LucideIcon,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -1703,11 +1704,24 @@ function App() {
             </div>
             <p className="text-xs font-medium text-slate-500">© {new Date().getFullYear()} PDFQuill Toolkit. Built for security & speed.</p>
           </div>
-          <div className="flex flex-wrap justify-center gap-x-8 gap-y-4">
+          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4">
             <button onClick={() => navigate('/privacy')} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Privacy</button>
             <button onClick={() => navigate('/terms')} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Terms</button>
             <a className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest" href="https://github.com/Himal-Joshi/PDFQuill" target="_blank" rel="noopener noreferrer">Github</a>
             <a className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest" href="https://github.com/Himal-Joshi/PDFQuill" target="_blank" rel="noopener noreferrer">Contact</a>
+            
+            <a 
+              href="https://buymemomo.com/Himal_Joshi" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-1.5 bg-white rounded-lg px-2.5 py-1.5 shadow-sm hover:shadow hover:-translate-y-0.5 transition-all"
+            >
+              <img src="https://buymemomo.com/logo.png" alt="" className="h-6 object-contain" />
+              <span className="flex items-baseline">
+                <span className="font-bold text-black text-sm tracking-tight leading-none">BuyMe</span>
+                <span className="font-bold text-[#f45d48] text-[15px] leading-none tracking-tight ml-[1px]" style={{ fontFamily: '"Brush Script MT", "Lucida Handwriting", cursive' }}>Momo</span>
+              </span>
+            </a>
           </div>
         </div>
       </footer>
@@ -2237,10 +2251,27 @@ function PricingView({ user }: { user: { email: string; token: string } | null }
     <div>
       <div className="text-center mb-12">
         <h2 className="text-4xl font-display font-extrabold text-slate-900 dark:text-white mb-4">Simple, transparent pricing.</h2>
-        <div className="inline-block bg-primary/10 text-primary px-4 py-2 rounded-full font-bold text-sm">
+        <div className="inline-block bg-primary/10 text-primary px-4 py-2 rounded-full font-bold text-sm mb-8">
           Note: The Beta version is completely free!
         </div>
+        
+        <div className="flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm text-center max-w-2xl mx-auto">
+          <p className="text-slate-600 dark:text-slate-300 mb-4 text-sm font-medium">PDFQuill is developed and maintained entirely for free. If it helps you out, consider supporting!</p>
+          <a 
+            href="https://buymemomo.com/Himal_Joshi" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 bg-white p-2 px-5 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+          >
+            <img src="https://buymemomo.com/logo.png" alt="" className="h-10 object-contain" />
+            <span className="flex items-baseline">
+              <span className="font-bold text-black text-2xl tracking-tighter leading-none">BuyMe</span>
+              <span className="font-bold text-[#f45d48] text-[28px] leading-none tracking-tight ml-[2px]" style={{ fontFamily: '"Brush Script MT", "Lucida Handwriting", cursive' }}>Momo</span>
+            </span>
+          </a>
+        </div>
       </div>
+      
       <div className="grid sm:grid-cols-3 gap-8">
         {plans.map((plan) => (
           <div key={plan.name} className="card p-8 flex flex-col">
