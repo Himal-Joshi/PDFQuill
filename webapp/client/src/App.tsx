@@ -35,7 +35,6 @@ import {
   Unlock,
   PlayCircle,
   X,
-  Coffee,
   type LucideIcon,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
