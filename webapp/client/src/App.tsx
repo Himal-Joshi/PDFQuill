@@ -629,20 +629,20 @@ function App() {
     <div className="min-h-screen selection:bg-primary/20 selection:text-primary">
       {/* Top Navigation Bar */}
       <nav className="fixed top-0 w-full z-50 glass">
-        <div className="flex justify-between items-center h-20 px-6 max-w-7xl mx-auto">
+        <div className="flex justify-between items-center h-20 px-8 w-full">
           <div className="flex items-center gap-3 cursor-pointer select-none group" onClick={goHome}>
             <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform duration-300">
               <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="PDFQuill" className="w-7 h-7 object-contain" />
             </div>
-            <span className="font-display text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            <span className="font-display text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
               <span className="dark:text-white">PDF</span><span className="text-primary">Quill</span>
             </span>
           </div>
 
           <div className="hidden md:flex items-center gap-8">
-            <button onClick={goHome} className={cn("text-sm font-semibold transition-colors duration-200", (activeTool === null && view === 'main') ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Tools</button>
-            <button onClick={() => navigate('/pricing')} className={cn("text-sm font-semibold transition-colors duration-200", view === 'pricing' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Pricing</button>
-            <button onClick={() => navigate('/solutions')} className={cn("text-sm font-semibold transition-colors duration-200", view === 'solutions' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Solutions</button>
+            <button onClick={goHome} className={cn("text-base font-semibold transition-colors duration-200", (activeTool === null && view === 'main') ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Tools</button>
+            <button onClick={() => navigate('/pricing')} className={cn("text-base font-semibold transition-colors duration-200", view === 'pricing' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Pricing</button>
+            <button onClick={() => navigate('/solutions')} className={cn("text-base font-semibold transition-colors duration-200", view === 'solutions' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Solutions</button>
           </div>
 
           <div className="flex items-center gap-4">
@@ -655,13 +655,13 @@ function App() {
             </button>
             {user ? (
               <div className="flex items-center gap-4">
-                <span className="text-sm font-semibold text-slate-600 dark:text-slate-400 hidden sm:block">{user.email}</span>
-                <button onClick={logout} className="btn btn-ghost">Logout</button>
+                <span className="text-base font-semibold text-slate-600 dark:text-slate-400 hidden sm:block">{user.email}</span>
+                <button onClick={logout} className="btn btn-ghost text-base">Logout</button>
               </div>
             ) : (
               <>
-                <button onClick={() => navigate('/login')} className="hidden sm:block btn btn-ghost">Login</button>
-                <button onClick={() => navigate('/get-started')} className="btn btn-primary">Get Started</button>
+                <button onClick={() => navigate('/login')} className="hidden sm:block btn btn-ghost text-base">Login</button>
+                <button onClick={() => navigate('/get-started')} className="btn btn-primary text-base">Get Started</button>
               </>
             )}
           </div>
@@ -692,13 +692,7 @@ function App() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6 }}
                 >
-                  <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold tracking-wider uppercase mb-6 border border-primary/20">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-                    </span>
-                    The Ultimate PDF Toolkit
-                  </span>
+
                   <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-extrabold text-slate-900 dark:text-white mb-6 tracking-tight leading-[1.1]">
                     Professional PDF tools, <br className="hidden sm:block" />
                     <span className="text-primary">beautifully simplified.</span>
