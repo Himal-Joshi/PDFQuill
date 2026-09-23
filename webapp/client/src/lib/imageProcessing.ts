@@ -1,5 +1,6 @@
 import { removeBackground as imglyRemoveBg } from '@imgly/background-removal';
 import JSZip from 'jszip';
+import { isNative } from './platform';
 
 export type ImageRemovalPreview = {
   name: string;
@@ -32,7 +33,7 @@ export async function removeBackground(
     progressOffset: number,
     progressShare: number,
   ): Promise<Blob> => {
-    const blob = await imglyRemoveBg(file, {
+    const config: any = {
       progress: (_key: string, current: number, total: number) => {
         if (onProgress && total > 0) {
           const localProgress = (current / total) * progressShare;
@@ -43,8 +44,13 @@ export async function removeBackground(
         format: 'image/png',
         quality: 1,
       },
-    });
+    };
 
+    if (isNative()) {
+      config.publicPath = '/local-assets/imgly/';
+    }
+
+    const blob = await imglyRemoveBg(file, config);
     return blob as Blob;
   };
 
@@ -183,6 +189,85 @@ export async function svgToPng(
     const blob = await convertOne(files[i]);
     const baseName = files[i].name.replace(/\.[^.]+$/, '');
     zip.file(`${baseName}.png`, blob);
+    if (onProgress) onProgress(Math.round(((i + 1) / files.length) * sharePerFile));
+  }
+
+  const zipBlob = await zip.generateAsync({ type: 'blob' });
+  if (onProgress) onProgress(100);
+  return { url: URL.createObjectURL(zipBlob), extension: 'zip' };
+}
+
+/**
+ * Convert images between formats (PNG, JPEG, WebP) using HTML5 Canvas.
+ * Handles transparency gracefully (compositing over white background for JPEG).
+ */
+export async function convertImageFormat(
+  files: File[],
+  targetFormat: 'png' | 'jpeg' | 'webp',
+  options: {
+    quality?: number;
+    backgroundColor?: string;
+  } = {},
+  onProgress?: (p: number) => void
+): Promise<{ url: string; extension: string }> {
+  const extension = targetFormat === 'jpeg' ? 'jpg' : targetFormat;
+  const mimeType = `image/${targetFormat}`;
+  const quality = options.quality ?? (targetFormat === 'png' ? undefined : targetFormat === 'jpeg' ? 0.92 : 0.85);
+
+  const convertOne = async (file: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Could not create canvas context.'));
+          return;
+        }
+
+        if (targetFormat === 'jpeg') {
+          ctx.fillStyle = options.backgroundColor || '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        ctx.drawImage(img, 0, 0);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) resolve(blob);
+            else reject(new Error(`Failed to convert image to ${extension.toUpperCase()}.`));
+          },
+          mimeType,
+          quality
+        );
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error(`Failed to read image "${file.name}". Please ensure it is a valid image file.`));
+      };
+
+      img.src = objectUrl;
+    });
+  };
+
+  if (files.length === 1) {
+    const blob = await convertOne(files[0]);
+    if (onProgress) onProgress(100);
+    return { url: URL.createObjectURL(blob), extension };
+  }
+
+  const zip = new JSZip();
+  const sharePerFile = 80 / files.length;
+  for (let i = 0; i < files.length; i++) {
+    const blob = await convertOne(files[i]);
+    const baseName = files[i].name.replace(/\.[^.]+$/, '');
+    zip.file(`${baseName}.${extension}`, blob);
     if (onProgress) onProgress(Math.round(((i + 1) / files.length) * sharePerFile));
   }
 
