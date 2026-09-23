@@ -3,8 +3,14 @@ import { PDFDocument, StandardFonts, degrees } from 'pdf-lib';
 import Tesseract from 'tesseract.js';
 import jsQR from 'jsqr';
 
+import { isNative } from './platform';
+
 // Ensure worker is configured for pdfjs-dist
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+if (isNative()) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/local-assets/pdfjs/pdf.worker.min.mjs';
+} else {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+}
 
 /** Supported OCR languages with display names */
 export const OCR_LANGUAGES: { code: string; label: string }[] = [
@@ -164,16 +170,52 @@ function rotateCanvas(canvas: HTMLCanvasElement, angleDegrees: number): HTMLCanv
 }
 
 /**
+ * Helper to create a Tesseract worker with offline capability if running natively.
+ */
+async function createConfiguredWorker(lang: string) {
+  if (isNative()) {
+    return await Tesseract.createWorker(lang, 1, {
+      workerPath: '/local-assets/tesseract/tesseract-ocr.worker.min.js',
+      corePath: '/local-assets/tesseract/tesseract-ocr-core.wasm.js',
+      langPath: '/local-assets/tesseract/lang',
+      cachePath: 'local',
+      logger: () => {},
+    });
+  } else {
+    return await Tesseract.createWorker(lang, 1, {
+      logger: () => {},
+    });
+  }
+}
+
+/**
  * OCR a single canvas and return Tesseract results.
  */
 async function ocrCanvas(
   canvas: HTMLCanvasElement,
   language: string
 ): Promise<Tesseract.Page> {
-  const result = await Tesseract.recognize(canvas, language, {
-    logger: () => {}, // suppress internal logs
-  });
-  return result.data;
+  const worker = await createConfiguredWorker(language);
+  try {
+    const result = await worker.recognize(canvas);
+    return result.data;
+  } finally {
+    await worker.terminate();
+  }
+}
+
+/**
+ * Detect text orientation/script using OSD (Orientation and Script Detection).
+ */
+async function ocrDetect(
+  canvas: HTMLCanvasElement
+): Promise<Tesseract.DetectResult> {
+  const worker = await createConfiguredWorker('osd');
+  try {
+    return await worker.detect(canvas);
+  } finally {
+    await worker.terminate();
+  }
 }
 
 /**
@@ -217,7 +259,7 @@ export async function ocrMakeSearchable(
     // Auto-rotate via OSD
     if (options.autoRotate) {
       try {
-        const detectResult = await Tesseract.detect(canvas, { logger: () => {} });
+        const detectResult = await ocrDetect(canvas);
         const orientation = detectResult.data.orientation_degrees;
         if (orientation && orientation !== 0 && orientation !== 360) {
           // Rotate canvas for better OCR
@@ -325,7 +367,7 @@ export async function ocrExtractText(
     // Auto-rotate
     if (options.autoRotate) {
       try {
-        const detectResult = await Tesseract.detect(canvas, { logger: () => {} });
+        const detectResult = await ocrDetect(canvas);
         const orientation = detectResult.data.orientation_degrees;
         if (orientation && orientation !== 0 && orientation !== 360) {
           finalCanvas = rotateCanvas(canvas, orientation);
