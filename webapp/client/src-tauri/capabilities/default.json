@@ -1,0 +1,26 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "enables the default permissions",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "dialog:default",
+    {
+      "identifier": "fs:default",
+      "allow": [
+        { "path": "$DESKTOP/*" },
+        { "path": "$DOCUMENT/*" },
+        { "path": "$DOWNLOAD/*" }
+      ]
+    },
+    {
+      "identifier": "shell:allow-open",
+      "allow": [
+        { "url": "^https?://.+" }
+      ]
+    }
+  ]
+}
