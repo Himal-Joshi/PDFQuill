@@ -42,12 +42,13 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { PDFDocument } from 'pdf-lib';
 import { mergePdfs, splitPdf, compressPdf, rotatePdf, watermarkPdf, addPageNumbers, organizePdf, imagesToPdf, pdfToImages, compressImages, flattenPdf, protectPdf, unlockPdf, type ConversionResult } from './lib/pdfProcessing';
-import { removeBackground, svgToPng, type ImageRemovalPreview, type ImageRemovalResult } from './lib/imageProcessing';
+import { removeBackground, svgToPng, convertImageFormat, type ImageRemovalPreview, type ImageRemovalResult } from './lib/imageProcessing';
 import { ocrMakeSearchable, ocrExtractText, OCR_LANGUAGES, type OcrProgress, type OcrTextResult } from './lib/ocrProcessing';
 import html2pdf from 'html2pdf.js';
 import { pdfToMarkdown, type MarkdownResult } from './lib/pdfToMdProcessing';
 import { auth, googleProvider } from './lib/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import { isNative } from './lib/platform';
 
 import { generateThumbnails, getPageImage, type PageThumbnail } from './lib/pdfThumbnails';
 
@@ -57,7 +58,7 @@ function cn(...inputs: ClassValue[]) {
 
 // const API_BASE = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? '/PDFQuill' : '/PDFQuill');
 
-type Tool = 'merge' | 'split' | 'compress' | 'rotate' | 'watermark' | 'page-numbers' | 'organize' | 'convert' | 'pdf-to-image' | 'compress-image' | 'remove-bg' | 'ocr' | 'ocr-extract' | 'html-to-pdf' | 'flatten-pdf' | 'protect-pdf' | 'unlock-pdf' | 'svg-to-png' | 'pdf-to-markdown';
+type Tool = 'merge' | 'split' | 'compress' | 'rotate' | 'watermark' | 'page-numbers' | 'organize' | 'convert' | 'pdf-to-image' | 'compress-image' | 'remove-bg' | 'ocr' | 'ocr-extract' | 'html-to-pdf' | 'flatten-pdf' | 'protect-pdf' | 'unlock-pdf' | 'svg-to-png' | 'pdf-to-markdown' | 'jpg-to-png' | 'png-to-jpg' | 'image-to-webp' | 'webp-to-jpg';
 
 type ToolConfig = {
   id: Tool;
@@ -236,6 +237,46 @@ const tools: ToolConfig[] = [
     icon: 'code',
     lucideIcon: FileCode2,
   },
+  {
+    id: 'jpg-to-png',
+    label: 'JPG to PNG',
+    description: 'Convert JPG or JPEG images into lossless, high-quality PNG format.',
+    endpoint: '',
+    icon: 'image',
+    lucideIcon: FileImage,
+    acceptsImages: true,
+    multiple: true,
+  },
+  {
+    id: 'png-to-jpg',
+    label: 'PNG to JPG',
+    description: 'Convert PNG images to lightweight JPG format with white background fill.',
+    endpoint: '',
+    icon: 'image',
+    lucideIcon: FileImage,
+    acceptsImages: true,
+    multiple: true,
+  },
+  {
+    id: 'image-to-webp',
+    label: 'Convert to WebP',
+    description: 'Convert JPG or PNG images into modern, ultra-compressed WebP format.',
+    endpoint: '',
+    icon: 'image',
+    lucideIcon: FileImage,
+    acceptsImages: true,
+    multiple: true,
+  },
+  {
+    id: 'webp-to-jpg',
+    label: 'WebP to JPG',
+    description: 'Convert modern WebP images into universally compatible JPG format.',
+    endpoint: '',
+    icon: 'image',
+    lucideIcon: FileImage,
+    acceptsImages: true,
+    multiple: true,
+  },
 ];
 
 type ViewType = 'main' | 'pricing' | 'solutions' | 'privacy' | 'terms' | 'login' | 'docs' | 'get-started';
@@ -280,6 +321,13 @@ function App() {
   const [user, setUser] = useState<{ email: string; token: string } | null>(null);
 
   useEffect(() => {
+    if (isNative()) {
+      setUser({
+        email: 'offline-user@pdfquill.local',
+        token: 'offline-token'
+      });
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         setUser({ 
@@ -291,6 +339,33 @@ function App() {
       }
     });
     return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!isNative()) return;
+
+    const handleExternalLink = async (e: MouseEvent) => {
+      let target = e.target as HTMLElement | null;
+      while (target && target !== document.body) {
+        if (target.tagName === 'A') {
+          const href = target.getAttribute('href');
+          if (href && (href.startsWith('http://') || href.startsWith('https://'))) {
+            e.preventDefault();
+            try {
+              const { open } = await import('@tauri-apps/plugin-shell');
+              await open(href);
+            } catch (err) {
+              console.error('Failed to open external link:', err);
+            }
+            break;
+          }
+        }
+        target = target.parentElement;
+      }
+    };
+
+    document.addEventListener('click', handleExternalLink);
+    return () => document.removeEventListener('click', handleExternalLink);
   }, []);
 
   const logout = async () => {
@@ -476,7 +551,7 @@ function App() {
 
   // Generate thumbnails when files change (for single-file PDF tools)
   useEffect(() => {
-    if (files.length === 0 || activeTool === 'convert' || activeTool === 'compress-image' || activeTool === 'remove-bg' || activeTool === 'svg-to-png') {
+    if (files.length === 0 || activeTool === 'convert' || activeTool === 'compress-image' || activeTool === 'remove-bg' || activeTool === 'svg-to-png' || activeTool === 'jpg-to-png' || activeTool === 'png-to-jpg' || activeTool === 'image-to-webp' || activeTool === 'webp-to-jpg') {
       Promise.resolve().then(() => setThumbnails([]));
       return;
     }
@@ -589,12 +664,40 @@ function App() {
     setFiles((currentFiles) => currentFiles.filter((_file, fileIndex) => fileIndex !== index));
   };
 
+  const handleNativeDownload = async (url: string, defaultName: string) => {
+    try {
+      const { save } = await import('@tauri-apps/plugin-dialog');
+      const { writeFile } = await import('@tauri-apps/plugin-fs');
+
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const arrayBuffer = await blob.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+
+      const extension = defaultName.split('.').pop() || '*';
+      const savePath = await save({
+        defaultPath: defaultName,
+        filters: [{
+          name: extension.toUpperCase(),
+          extensions: [extension]
+        }]
+      });
+
+      if (savePath) {
+        await writeFile(savePath, uint8Array);
+      }
+    } catch (err) {
+      console.error('Error saving file natively:', err);
+      alert('Error saving file natively: ' + err);
+    }
+  };
+
   const processFile = async () => {
     if (files.length === 0 && !(activeTool === 'html-to-pdf' && htmlContent.trim().length > 0)) return;
 
     // Rate Limiting Logic
     const today = new Date().toISOString().split('T')[0];
-    const userLimit = user ? 10 : 2; // Anonymous limit is 2, logged-in limit is 10
+    const userLimit = isNative() ? Infinity : (user ? 10 : 2); // Anonymous limit is 2, logged-in limit is 10
     const usageKey = `pdfquill_usage_${today}`;
     const currentUsage = parseInt(localStorage.getItem(usageKey) || '0', 10);
 
@@ -646,6 +749,22 @@ function App() {
         setDownloadExtension(result.extension);
       } else if (activeTool === 'svg-to-png') {
         const result = await svgToPng(files, imageScale);
+        resultUrl = result.url;
+        setDownloadExtension(result.extension);
+      } else if (activeTool === 'jpg-to-png') {
+        const result = await convertImageFormat(files, 'png');
+        resultUrl = result.url;
+        setDownloadExtension(result.extension);
+      } else if (activeTool === 'png-to-jpg') {
+        const result = await convertImageFormat(files, 'jpeg', { quality: imageQuality });
+        resultUrl = result.url;
+        setDownloadExtension(result.extension);
+      } else if (activeTool === 'image-to-webp') {
+        const result = await convertImageFormat(files, 'webp', { quality: imageQuality });
+        resultUrl = result.url;
+        setDownloadExtension(result.extension);
+      } else if (activeTool === 'webp-to-jpg') {
+        const result = await convertImageFormat(files, 'jpeg', { quality: imageQuality });
         resultUrl = result.url;
         setDownloadExtension(result.extension);
       } else if (activeTool === 'remove-bg') {
@@ -730,7 +849,7 @@ function App() {
     },
     {
       title: "Convert & Compress",
-      tools: filteredTools.filter(t => ['compress', 'convert', 'pdf-to-image', 'compress-image', 'html-to-pdf', 'svg-to-png', 'pdf-to-markdown'].includes(t.id))
+      tools: filteredTools.filter(t => ['compress', 'convert', 'pdf-to-image', 'compress-image', 'html-to-pdf', 'svg-to-png', 'pdf-to-markdown', 'jpg-to-png', 'png-to-jpg', 'image-to-webp', 'webp-to-jpg'].includes(t.id))
     },
     {
       title: "AI & Extraction",
@@ -1002,7 +1121,15 @@ function App() {
                     type="file"
                     className="hidden"
                     multiple={selectedTool.multiple}
-                    accept={activeTool === 'svg-to-png' ? '.svg' : selectedTool.acceptsImages ? '.png,.jpg,.jpeg' : activeTool === 'html-to-pdf' ? '.html,.htm' : '.pdf'}
+                    accept={
+                      activeTool === 'svg-to-png' ? '.svg' :
+                      activeTool === 'jpg-to-png' ? '.jpg,.jpeg,.webp' :
+                      activeTool === 'png-to-jpg' ? '.png,.webp' :
+                      activeTool === 'image-to-webp' ? '.jpg,.jpeg,.png' :
+                      activeTool === 'webp-to-jpg' ? '.webp' :
+                      selectedTool.acceptsImages ? '.png,.jpg,.jpeg,.webp' :
+                      activeTool === 'html-to-pdf' ? '.html,.htm' : '.pdf'
+                    }
                     onChange={handleFileChange}
                   />
                   <label
@@ -1023,7 +1150,15 @@ function App() {
                       <Upload size={32} />
                     </div>
                     <span className="text-xl font-bold text-slate-900 dark:text-white mb-2">
-                      {files.length > 0 ? `${files.length} files selected` : `Drop your ${activeTool === 'svg-to-png' ? 'SVG files' : selectedTool.acceptsImages ? 'images' : activeTool === 'html-to-pdf' ? 'HTML files' : 'PDFs'} here`}
+                      {files.length > 0 ? `${files.length} files selected` : `Drop your ${
+                        activeTool === 'svg-to-png' ? 'SVG files' :
+                        activeTool === 'jpg-to-png' ? 'JPG images' :
+                        activeTool === 'png-to-jpg' ? 'PNG images' :
+                        activeTool === 'image-to-webp' ? 'JPG/PNG images' :
+                        activeTool === 'webp-to-jpg' ? 'WebP images' :
+                        selectedTool.acceptsImages ? 'images' :
+                        activeTool === 'html-to-pdf' ? 'HTML files' : 'PDFs'
+                      } here`}
                     </span>
                     <p className="text-slate-500 dark:text-slate-400 max-w-xs">
                       {selectedTool.multiple ? 'Click to browse or drag and drop multiple files' : 'Select a single file to begin processing'}
@@ -1122,7 +1257,7 @@ function App() {
                 )}
 
                 {/* Page Thumbnails Grid */}
-                {files.length > 0 && activeTool !== 'merge' && activeTool !== 'convert' && activeTool !== 'compress-image' && activeTool !== 'remove-bg' && activeTool !== 'svg-to-png' && (
+                {files.length > 0 && activeTool !== 'merge' && activeTool !== 'convert' && activeTool !== 'compress-image' && activeTool !== 'remove-bg' && activeTool !== 'svg-to-png' && activeTool !== 'jpg-to-png' && activeTool !== 'png-to-jpg' && activeTool !== 'image-to-webp' && activeTool !== 'webp-to-jpg' && (
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -1482,7 +1617,14 @@ function App() {
                       </div>
                       <a
                         href={downloadUrl}
-                        download={`PDFQuill_${activeTool}${activeTool === 'split' && splitMode === 'all' ? '.zip' : (activeTool === 'pdf-to-image' || activeTool === 'compress-image' || activeTool === 'remove-bg' || activeTool === 'svg-to-png') ? `.${downloadExtension}` : '.pdf'}`}
+                        download={`PDFQuill_${activeTool}${activeTool === 'split' && splitMode === 'all' ? '.zip' : (activeTool === 'pdf-to-image' || activeTool === 'compress-image' || activeTool === 'remove-bg' || activeTool === 'svg-to-png' || activeTool === 'jpg-to-png' || activeTool === 'png-to-jpg' || activeTool === 'image-to-webp' || activeTool === 'webp-to-jpg') ? `.${downloadExtension}` : '.pdf'}`}
+                        onClick={(e) => {
+                          if (isNative()) {
+                            e.preventDefault();
+                            const fileName = `PDFQuill_${activeTool}${activeTool === 'split' && splitMode === 'all' ? '.zip' : (activeTool === 'pdf-to-image' || activeTool === 'compress-image' || activeTool === 'remove-bg' || activeTool === 'svg-to-png' || activeTool === 'jpg-to-png' || activeTool === 'png-to-jpg' || activeTool === 'image-to-webp' || activeTool === 'webp-to-jpg') ? `.${downloadExtension}` : '.pdf'}`;
+                            handleNativeDownload(downloadUrl, fileName);
+                          }
+                        }}
                         className="btn bg-emerald-600 text-white hover:bg-emerald-700 w-full py-3 text-base shadow-lg shadow-emerald-600/20 flex justify-center items-center mt-2"
                       >
                         <Download size={18} className="mr-2" />
@@ -1509,6 +1651,12 @@ function App() {
                           key={idx}
                           href={dl.url}
                           download={dl.name}
+                          onClick={(e) => {
+                            if (isNative()) {
+                              e.preventDefault();
+                              handleNativeDownload(dl.url, dl.name);
+                            }
+                          }}
                           className="btn bg-emerald-600 text-white hover:bg-emerald-700 w-full py-3 text-sm shadow-sm shadow-emerald-600/20 flex justify-center items-center"
                         >
                           <Download size={16} className="mr-2" />
@@ -2221,6 +2369,105 @@ function ToolOptions({
         <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
           Render vector SVG drawings into high-resolution PNG images. SVGs are scaled losslessly before exporting.
         </p>
+      </div>
+    );
+  }
+
+  if (activeTool === 'jpg-to-png') {
+    return (
+      <div className="grid gap-6">
+        <div className="rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 p-4">
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
+            ✨ Converts JPG/JPEG images into uncompressed, lossless PNG graphics.
+          </p>
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2">
+            No quality loss. Single files download directly; multiple files are bundled in a ZIP.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (activeTool === 'png-to-jpg') {
+    return (
+      <div className="grid gap-6">
+        <Field label={`JPEG Quality (${Math.round(imageQuality * 100)}%)`}>
+          <input
+            type="range"
+            min="0.5"
+            max="1"
+            step="0.05"
+            value={imageQuality}
+            onChange={(e) => setImageQuality(Number(e.target.value))}
+            className="w-full accent-primary"
+          />
+          <div className="flex justify-between text-xs font-medium text-slate-400">
+            <span>50% (Smaller size)</span>
+            <span>90% (Recommended)</span>
+            <span>100% (Best quality)</span>
+          </div>
+        </Field>
+        <div className="rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 p-4">
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
+            🎨 Transparent areas in PNG images are automatically composited over a clean white background.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (activeTool === 'image-to-webp') {
+    return (
+      <div className="grid gap-6">
+        <Field label={`WebP Quality (${Math.round(imageQuality * 100)}%)`}>
+          <input
+            type="range"
+            min="0.5"
+            max="1"
+            step="0.05"
+            value={imageQuality}
+            onChange={(e) => setImageQuality(Number(e.target.value))}
+            className="w-full accent-primary"
+          />
+          <div className="flex justify-between text-xs font-medium text-slate-400">
+            <span>50% (High compression)</span>
+            <span>85% (Balanced)</span>
+            <span>100% (Lossless)</span>
+          </div>
+        </Field>
+        <div className="rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 p-4">
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
+            🚀 WebP provides up to 30% smaller file sizes than JPEG with identical visual quality.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (activeTool === 'webp-to-jpg') {
+    return (
+      <div className="grid gap-6">
+        <Field label={`JPEG Quality (${Math.round(imageQuality * 100)}%)`}>
+          <input
+            type="range"
+            min="0.5"
+            max="1"
+            step="0.05"
+            value={imageQuality}
+            onChange={(e) => setImageQuality(Number(e.target.value))}
+            className="w-full accent-primary"
+          />
+          <div className="flex justify-between text-xs font-medium text-slate-400">
+            <span>50% (Smaller size)</span>
+            <span>90% (Recommended)</span>
+            <span>100% (Best quality)</span>
+          </div>
+        </Field>
+        <div className="rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 p-4">
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
+            🖼️ Converts modern WebP images to widely supported JPG format. Transparent pixels are rendered on a white background.
+          </p>
+        </div>
       </div>
     );
   }
