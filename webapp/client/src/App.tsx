@@ -340,9 +340,9 @@ function App() {
     }
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        setUser({ 
-          email: firebaseUser.email || '', 
-          token: await firebaseUser.getIdToken() 
+        setUser({
+          email: firebaseUser.email || '',
+          token: await firebaseUser.getIdToken()
         });
       } else {
         setUser(null);
@@ -407,7 +407,7 @@ function App() {
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState('');
-  const [downloadUrls, setDownloadUrls] = useState<{url: string, name: string}[]>([]);
+  const [downloadUrls, setDownloadUrls] = useState<{ url: string, name: string }[]>([]);
   const [error, setError] = useState('');
   const [splitMode, setSplitMode] = useState<'all' | 'range' | 'color'>('all');
   const [compressLevel, setCompressLevel] = useState<'low' | 'medium' | 'high'>('medium');
@@ -470,7 +470,7 @@ function App() {
       dragItem.current = null;
       dragOverItem.current = null;
       setThumbnails(copyThumbnails);
-      
+
       if (activeTool === 'organize' && organizeAction === 'reorder') {
         setPageRange(copyThumbnails.map(t => t.pageNumber).join(','));
       }
@@ -491,14 +491,14 @@ function App() {
     }
     setActiveTool(tool);
     navigate(`/tool/${tool}`);
-    
+
     if (landingFile) {
       setFiles([landingFile]);
       setLandingFile(null);
     } else {
       setFiles([]);
     }
-    
+
     setDownloadUrl('');
     setDownloadUrls([]);
     setError('');
@@ -526,7 +526,7 @@ function App() {
       const [copiedPage] = await newDoc.copyPages(sourceDoc, [thumbnails[previewIndex].pageNumber - 1]);
       newDoc.addPage(copiedPage);
       const pdfBytes = await newDoc.save();
-      
+
       const blob = new Blob([pdfBytes as unknown as BlobPart], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -586,10 +586,10 @@ function App() {
       setHighResPreview(null);
       return;
     }
-    
+
     let isMounted = true;
     setIsLoadingPreview(true);
-    
+
     getPageImage(files[0], thumbnails[previewIndex].pageNumber)
       .then((dataUrl) => {
         if (isMounted) {
@@ -601,7 +601,7 @@ function App() {
         console.error('Failed to load high-res preview:', err);
         if (isMounted) setIsLoadingPreview(false);
       });
-      
+
     return () => { isMounted = false; };
   }, [previewIndex, files, thumbnails]);
 
@@ -637,7 +637,7 @@ function App() {
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || event.target.files.length === 0) return;
     const newFiles = Array.from(event.target.files);
-    
+
     if (selectedTool.multiple) {
       setFiles((current) => [...current, ...newFiles]);
     } else {
@@ -803,10 +803,10 @@ function App() {
           content = await files[0].text();
         }
         if (!content.trim()) throw new Error('Please enter some HTML or upload an HTML file.');
-        
+
         const element = document.createElement('div');
         element.innerHTML = content;
-        
+
         const blob = await html2pdf().from(element).output('blob');
         resultUrl = URL.createObjectURL(blob);
       } else if (activeTool === 'pdf-to-markdown') {
@@ -815,13 +815,13 @@ function App() {
         // No direct download URL — we show the markdown inline with download buttons
         resultUrl = '';
       }
-      
+
       if (Array.isArray(resultUrl)) {
         setDownloadUrls(resultUrl);
       } else {
         setDownloadUrl(resultUrl);
       }
-      
+
       // Increment usage on success
       localStorage.setItem(usageKey, (currentUsage + 1).toString());
     } catch (requestError: unknown) {
@@ -844,7 +844,7 @@ function App() {
     const isPdf = landingFile.type === 'application/pdf';
     const isHtml = landingFile.type === 'text/html';
     const isSvg = landingFile.type === 'image/svg+xml';
-    
+
     if (isImage && !isSvg) return tool.acceptsImages;
     if (isPdf) return !tool.acceptsImages || tool.id === 'pdf-to-image';
     if (isSvg) return tool.id === 'svg-to-png';
@@ -855,7 +855,7 @@ function App() {
   const toolGroups = [
     {
       title: "Edit & Organize",
-      tools: filteredTools.filter(t => ['merge', 'split', 'rotate', 'watermark', 'page-numbers', 'organize', 'flatten-pdf', 'protect-pdf', 'unlock-pdf'].includes(t.id))
+      tools: filteredTools.filter(t => ['edit-pdf', 'merge', 'split', 'rotate', 'watermark', 'page-numbers', 'organize', 'flatten-pdf', 'protect-pdf', 'unlock-pdf'].includes(t.id))
     },
     {
       title: "Convert & Compress",
@@ -942,7 +942,7 @@ function App() {
                   <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
                     Merge, split, compress, and convert your documents with a premium toolkit designed for modern workflows. Fast, private, and 100% free.
                   </p>
-                  
+
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
                     <button onClick={() => document.getElementById('tools-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="btn btn-primary px-8 py-4 text-base w-full sm:w-auto">
                       Explore All Tools
@@ -951,8 +951,8 @@ function App() {
                       View Documentation
                     </button>
                   </div>
-                  
-                  <div 
+
+                  <div
                     className={cn(
                       "w-full max-w-2xl mx-auto p-8 min-h-[200px] flex flex-col items-center justify-center rounded-2xl border-2 border-dashed transition-all duration-300 relative bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm",
                       landingDragActive ? "border-primary bg-primary/5 scale-105" : "border-slate-300 dark:border-slate-700 hover:border-primary/50"
@@ -968,17 +968,17 @@ function App() {
                       }
                     }}
                   >
-                    <input 
-                      type="file" 
-                      className="hidden" 
-                      id="landing-file-upload" 
+                    <input
+                      type="file"
+                      className="hidden"
+                      id="landing-file-upload"
                       onChange={(e) => {
                         if (e.target.files && e.target.files.length > 0) {
                           setLandingFile(e.target.files[0]);
                         }
                       }}
                     />
-                    
+
                     {landingFile ? (
                       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 w-full min-w-0">
                         <div className="flex items-center bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 w-full min-w-0">
@@ -990,8 +990,8 @@ function App() {
                               <p className="font-semibold text-slate-900 dark:text-white truncate">{landingFile.name}</p>
                               <p className="text-xs text-slate-500">{(landingFile.size / 1024 / 1024).toFixed(2)} MB</p>
                             </div>
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); setLandingFile(null); const el = document.getElementById('landing-file-upload') as HTMLInputElement; if(el) el.value = ''; }}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setLandingFile(null); const el = document.getElementById('landing-file-upload') as HTMLInputElement; if (el) el.value = ''; }}
                               className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors shrink-0"
                             >
                               <X size={20} />
@@ -1015,7 +1015,7 @@ function App() {
                       </label>
                     )}
                   </div>
-                  
+
                   {landingFile && filteredTools.length > 0 && (
                     <div className="mt-6 text-sm font-semibold text-primary animate-pulse">
                       Scroll down to select a tool &darr;
@@ -1111,7 +1111,7 @@ function App() {
               >
                 <ArrowLeft size={16} /> Back to all tools
               </motion.button>
-              
+
               <motion.header
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1128,374 +1128,373 @@ function App() {
 
               <div className="flex flex-col lg:flex-row gap-8 items-start">
                 <section className="flex-1 w-full grid gap-8">
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.1 }}
-                  className="card p-8 group relative"
-                >
-                  <input
-                    id="file-input"
-                    type="file"
-                    className="hidden"
-                    multiple={selectedTool.multiple}
-                    accept={
-                      activeTool === 'svg-to-png' ? '.svg' :
-                      activeTool === 'jpg-to-png' ? '.jpg,.jpeg,.webp' :
-                      activeTool === 'png-to-jpg' ? '.png,.webp' :
-                      activeTool === 'image-to-webp' ? '.jpg,.jpeg,.png' :
-                      activeTool === 'webp-to-jpg' ? '.webp' :
-                      selectedTool.acceptsImages ? '.png,.jpg,.jpeg,.webp' :
-                      activeTool === 'html-to-pdf' ? '.html,.htm' : '.pdf'
-                    }
-                    onChange={handleFileChange}
-                  />
-                  <label
-                    htmlFor="file-input"
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                    className={cn(
-                      'flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-16 text-center transition-all duration-300',
-                      files.length > 0
-                        ? 'border-primary bg-primary/5 text-primary'
-                        : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 hover:border-primary/50 group-hover:bg-white dark:group-hover:bg-slate-900 shadow-inner'
-                    )}
-                  >
-                    <div className={cn(
-                      "w-16 h-16 rounded-full flex items-center justify-center mb-6 transition-all duration-300",
-                      files.length > 0 ? "bg-primary text-white scale-110" : "bg-white dark:bg-slate-800 text-slate-400 group-hover:text-primary group-hover:scale-110 shadow-sm"
-                    )}>
-                      <Upload size={32} />
-                    </div>
-                    <span className="text-xl font-bold text-slate-900 dark:text-white mb-2">
-                      {files.length > 0 ? `${files.length} files selected` : `Drop your ${
-                        activeTool === 'svg-to-png' ? 'SVG files' :
-                        activeTool === 'jpg-to-png' ? 'JPG images' :
-                        activeTool === 'png-to-jpg' ? 'PNG images' :
-                        activeTool === 'image-to-webp' ? 'JPG/PNG images' :
-                        activeTool === 'webp-to-jpg' ? 'WebP images' :
-                        selectedTool.acceptsImages ? 'images' :
-                        activeTool === 'html-to-pdf' ? 'HTML files' : 'PDFs'
-                      } here`}
-                    </span>
-                    <p className="text-slate-500 dark:text-slate-400 max-w-xs">
-                      {selectedTool.multiple ? 'Click to browse or drag and drop multiple files' : 'Select a single file to begin processing'}
-                    </p>
-                  </label>
-                </motion.div>
-
-                {files.length > 0 && (
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="card p-6"
-                  >
-                    <div className="mb-6 flex items-center justify-between">
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                        {activeTool === 'merge' ? `Merge Order (${files.length} files)` : `Queue (${files.length})`}
-                      </h3>
-                      <button
-                        type="button"
-                        onClick={() => { setFiles([]); setThumbnails([]); }}
-                        className="text-xs font-bold text-red-500 hover:text-red-600 transition-colors"
-                      >
-                        REMOVE ALL
-                      </button>
-                    </div>
-                    <div className="grid gap-3">
-                      {files.map((file, index) => (
-                        <motion.div
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          key={`${file.name}-${index}`}
-                          className="flex items-center justify-between gap-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 px-4 py-3 group/item"
-                        >
-                          <div className="flex min-w-0 items-center gap-3">
-                            {/* Order badge for merge */}
-                            {activeTool === 'merge' && (
-                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary text-sm font-black">
-                                {index + 1}
-                              </div>
-                            )}
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white dark:bg-slate-800 text-primary shadow-sm border border-slate-100 dark:border-slate-700">
-                              {file.type.startsWith('image/') ? <FileImage size={20} /> : <FileText size={20} />}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-bold text-slate-900 dark:text-white">{file.name}</p>
-                              <p className="text-xs font-medium text-slate-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            {/* Reorder controls for merge */}
-                            {activeTool === 'merge' && files.length > 1 && (
-                              <div className="flex flex-col">
-                                <button
-                                  type="button"
-                                  onClick={() => moveFileUp(index)}
-                                  disabled={index === 0}
-                                  className={cn(
-                                    "rounded p-1 transition-all",
-                                    index === 0
-                                      ? "text-slate-200 dark:text-slate-700 cursor-not-allowed"
-                                      : "text-slate-400 hover:bg-primary/10 hover:text-primary"
-                                  )}
-                                  aria-label="Move up"
-                                >
-                                  <ChevronUp size={16} />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => moveFileDown(index)}
-                                  disabled={index === files.length - 1}
-                                  className={cn(
-                                    "rounded p-1 transition-all",
-                                    index === files.length - 1
-                                      ? "text-slate-200 dark:text-slate-700 cursor-not-allowed"
-                                      : "text-slate-400 hover:bg-primary/10 hover:text-primary"
-                                  )}
-                                  aria-label="Move down"
-                                >
-                                  <ChevronDown size={16} />
-                                </button>
-                              </div>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => removeFile(index)}
-                              className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 transition-all"
-                              aria-label={`Remove ${file.name}`}
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Page Thumbnails Grid */}
-                {files.length > 0 && activeTool !== 'merge' && activeTool !== 'convert' && activeTool !== 'compress-image' && activeTool !== 'remove-bg' && activeTool !== 'svg-to-png' && activeTool !== 'jpg-to-png' && activeTool !== 'png-to-jpg' && activeTool !== 'image-to-webp' && activeTool !== 'webp-to-jpg' && (
                   <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.15 }}
-                    className="card p-6"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.1 }}
+                    className="card p-8 group relative"
                   >
-                    <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                        Page Preview
-                      </h3>
-                      {activeTool === 'organize' && organizeAction === 'reorder' && (
-                        <p className="text-sm text-primary bg-primary/10 px-3 py-1.5 rounded-md flex items-center gap-2 font-medium">
-                          <AlertCircle size={16} />
-                          You can also drag pages in page preview to organize in order
-                        </p>
+                    <input
+                      id="file-input"
+                      type="file"
+                      className="hidden"
+                      multiple={selectedTool.multiple}
+                      accept={
+                        activeTool === 'svg-to-png' ? '.svg' :
+                          activeTool === 'jpg-to-png' ? '.jpg,.jpeg,.webp' :
+                            activeTool === 'png-to-jpg' ? '.png,.webp' :
+                              activeTool === 'image-to-webp' ? '.jpg,.jpeg,.png' :
+                                activeTool === 'webp-to-jpg' ? '.webp' :
+                                  selectedTool.acceptsImages ? '.png,.jpg,.jpeg,.webp' :
+                                    activeTool === 'html-to-pdf' ? '.html,.htm' : '.pdf'
+                      }
+                      onChange={handleFileChange}
+                    />
+                    <label
+                      htmlFor="file-input"
+                      onDragOver={handleDragOver}
+                      onDrop={handleDrop}
+                      className={cn(
+                        'flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-16 text-center transition-all duration-300',
+                        files.length > 0
+                          ? 'border-primary bg-primary/5 text-primary'
+                          : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 hover:border-primary/50 group-hover:bg-white dark:group-hover:bg-slate-900 shadow-inner'
                       )}
-                    </div>
-                    {loadingThumbnails ? (
-                      <div className="flex flex-col items-center justify-center py-12 gap-3">
-                        <Loader2 className="animate-spin text-primary" size={32} />
-                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Rendering pages…</p>
-                      </div>
-                    ) : thumbnails.length > 0 ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                        {thumbnails.map((thumb, index) => (
-                          <div
-                            key={thumb.pageNumber}
-                            draggable={activeTool === 'organize' && organizeAction === 'reorder'}
-                            onDragStart={(e) => handleDragStart(e, index)}
-                            onDragEnter={(e) => handleDragEnter(e, index)}
-                            onDragEnd={handleDragEnd}
-                            onDragOver={(e) => e.preventDefault()}
-                            className={cn(
-                              "group/thumb flex flex-col items-center gap-2 transition-all duration-200",
-                              activeTool === 'organize' && organizeAction === 'reorder' && "cursor-grab active:cursor-grabbing"
-                            )}
-                          >
-                            <div 
-                              className="relative rounded-xl border-2 border-slate-100 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900 shadow-sm hover:border-primary/40 hover:shadow-md transition-all duration-200 cursor-pointer group/overlay"
-                              onClick={() => setPreviewIndex(index)}
-                            >
-                              <img
-                                src={thumb.dataUrl}
-                                alt={`Page ${thumb.pageNumber}`}
-                                className="w-full h-auto block"
-                                loading="lazy"
-                              />
-                              <div className="absolute inset-0 bg-black/0 group-hover/overlay:bg-black/20 transition-colors flex items-center justify-center">
-                                <Maximize2 className="text-white opacity-0 group-hover/overlay:opacity-100 transition-opacity drop-shadow-md" size={32} />
-                              </div>
-                            </div>
-                            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 group-hover/thumb:text-primary transition-colors">
-                              {thumb.pageNumber}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-8">No pages to preview.</p>
-                    )}
-                  </motion.div>
-                )}
-
-                {/* Page Preview Modal */}
-                <AnimatePresence>
-                  {previewIndex !== null && thumbnails[previewIndex] && (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/95 backdrop-blur-sm"
-                      onClick={() => setPreviewIndex(null)}
                     >
-                      <div className="absolute top-4 sm:top-6 left-4 sm:left-6 text-white font-medium bg-slate-800/80 px-3 sm:px-4 py-2 rounded-lg border border-slate-700 shadow-lg z-10 max-w-[45vw] sm:max-w-[60vw] truncate text-xs sm:text-base">
-                        Page Preview for {files[0]?.name}
+                      <div className={cn(
+                        "w-16 h-16 rounded-full flex items-center justify-center mb-6 transition-all duration-300",
+                        files.length > 0 ? "bg-primary text-white scale-110" : "bg-white dark:bg-slate-800 text-slate-400 group-hover:text-primary group-hover:scale-110 shadow-sm"
+                      )}>
+                        <Upload size={32} />
                       </div>
-                      
-                      <div className="absolute top-4 sm:top-6 right-4 sm:right-6 flex items-center gap-2 sm:gap-3 z-10">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleDownloadPreviewPdf(); }} 
-                          className="flex items-center gap-2 px-2 sm:px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 shadow transition-all text-xs sm:text-sm font-medium"
-                          title="Download PDF Page"
-                        >
-                          <Download size={16} /> <span className="hidden sm:inline">PDF</span>
-                        </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); handleDownloadPreviewPng(); }} 
-                          className="flex items-center gap-2 px-2 sm:px-3 py-2 bg-white text-slate-800 rounded-lg hover:bg-slate-100 shadow transition-all text-xs sm:text-sm font-medium"
-                          title="Download PNG Image"
-                        >
-                          <Download size={16} /> <span className="hidden sm:inline">PNG</span>
-                        </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setPreviewIndex(null); }}
-                          className="p-2 text-white/70 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-all shadow border border-slate-700 ml-1 sm:ml-2"
-                        >
-                          <X size={20} />
-                        </button>
-                      </div>
+                      <span className="text-xl font-bold text-slate-900 dark:text-white mb-2">
+                        {files.length > 0 ? `${files.length} files selected` : `Drop your ${activeTool === 'svg-to-png' ? 'SVG files' :
+                            activeTool === 'jpg-to-png' ? 'JPG images' :
+                              activeTool === 'png-to-jpg' ? 'PNG images' :
+                                activeTool === 'image-to-webp' ? 'JPG/PNG images' :
+                                  activeTool === 'webp-to-jpg' ? 'WebP images' :
+                                    selectedTool.acceptsImages ? 'images' :
+                                      activeTool === 'html-to-pdf' ? 'HTML files' : 'PDFs'
+                          } here`}
+                      </span>
+                      <p className="text-slate-500 dark:text-slate-400 max-w-xs">
+                        {selectedTool.multiple ? 'Click to browse or drag and drop multiple files' : 'Select a single file to begin processing'}
+                      </p>
+                    </label>
+                  </motion.div>
 
-                      {/* Desktop Side Arrows */}
-                      {previewIndex > 0 && (
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setPreviewIndex(previewIndex - 1); }}
-                          className="hidden sm:flex absolute left-6 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-all z-10"
-                        >
-                          <ChevronLeft size={32} />
-                        </button>
-                      )}
-                      
-                      <motion.div 
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0.9, opacity: 0 }}
-                        className="relative max-w-[95vw] max-h-[85vh] sm:max-h-[95vh] flex flex-col items-center pb-16 sm:pb-0"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div className="relative flex items-center justify-center min-h-[40vh] sm:min-h-[50vh] min-w-[50vw]">
-                          {isLoadingPreview && !highResPreview && (
-                            <div className="absolute inset-0 flex items-center justify-center z-10 bg-slate-900/20 backdrop-blur-sm rounded-lg">
-                              <Loader2 className="animate-spin text-white" size={48} />
-                            </div>
-                          )}
-                          <img 
-                            src={highResPreview || thumbnails[previewIndex].dataUrl} 
-                            alt={`Page ${thumbnails[previewIndex].pageNumber}`}
-                            className={cn(
-                              "max-w-[90vw] max-h-[80vh] sm:max-h-[90vh] object-contain rounded-lg shadow-2xl bg-white transition-opacity duration-300",
-                              isLoadingPreview && !highResPreview ? "opacity-50 blur-sm" : "opacity-100"
-                            )}
-                          />
-                        </div>
-                        
-                        {/* Desktop Page Number */}
-                        <div className="hidden sm:block mt-6 px-6 py-2 bg-slate-800 rounded-full text-white font-medium text-sm border border-slate-700 shadow-lg">
-                          Page {thumbnails[previewIndex].pageNumber} of {thumbnails.length}
-                        </div>
-                      </motion.div>
-                      
-                      {/* Mobile Bottom Navigation Bar */}
-                      <div className="sm:hidden fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center justify-between w-[90vw] max-w-sm bg-slate-800/95 backdrop-blur px-4 py-2 rounded-full border border-slate-700 shadow-2xl z-20">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setPreviewIndex(previewIndex - 1); }}
-                          disabled={previewIndex === 0}
-                          className="p-3 text-white/70 hover:text-white disabled:opacity-30 transition-all rounded-full hover:bg-white/10"
-                        >
-                          <ChevronLeft size={28} />
-                        </button>
-                        <div className="text-white font-medium text-sm">
-                          Page {thumbnails[previewIndex].pageNumber} of {thumbnails.length}
-                        </div>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setPreviewIndex(previewIndex + 1); }}
-                          disabled={previewIndex === thumbnails.length - 1}
-                          className="p-3 text-white/70 hover:text-white disabled:opacity-30 transition-all rounded-full hover:bg-white/10"
-                        >
-                          <ChevronRight size={28} />
-                        </button>
-                      </div>
-
-                      {/* Desktop Side Arrows */}
-                      {previewIndex < thumbnails.length - 1 && (
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setPreviewIndex(previewIndex + 1); }}
-                          className="hidden sm:flex absolute right-6 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-all z-10"
-                        >
-                          <ChevronRight size={32} />
-                        </button>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Previews & Downloads (Wide Layout) */}
-                <AnimatePresence>
-                  {activeTool === 'remove-bg' && processedPreviews.length > 0 && (
+                  {files.length > 0 && (
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="card p-6 border border-slate-200 dark:border-slate-800"
+                      className="card p-6"
                     >
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-6">
-                        Background Removal Preview
-                      </h3>
-                      <div className="grid gap-8">
-                        {processedPreviews.map((preview, index) => (
-                          <div key={index} className="flex flex-col gap-4 border-b border-slate-100 dark:border-slate-800 last:border-b-0 pb-6 last:pb-0">
-                            {processedPreviews.length > 1 && (
-                              <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{preview.name}</span>
-                            )}
-                            <div className="grid sm:grid-cols-2 gap-6">
-                              <div className="flex flex-col gap-2">
-                                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Original</span>
-                                <div className="h-64 sm:h-80 w-full bg-slate-50 dark:bg-slate-950 rounded-xl overflow-hidden flex items-center justify-center p-4 border border-slate-200 dark:border-slate-800">
-                                  <img src={preview.originalUrl} alt="Original" className="max-w-full max-h-full object-contain rounded" />
+                      <div className="mb-6 flex items-center justify-between">
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                          {activeTool === 'merge' ? `Merge Order (${files.length} files)` : `Queue (${files.length})`}
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={() => { setFiles([]); setThumbnails([]); }}
+                          className="text-xs font-bold text-red-500 hover:text-red-600 transition-colors"
+                        >
+                          REMOVE ALL
+                        </button>
+                      </div>
+                      <div className="grid gap-3">
+                        {files.map((file, index) => (
+                          <motion.div
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            key={`${file.name}-${index}`}
+                            className="flex items-center justify-between gap-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 px-4 py-3 group/item"
+                          >
+                            <div className="flex min-w-0 items-center gap-3">
+                              {/* Order badge for merge */}
+                              {activeTool === 'merge' && (
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary text-sm font-black">
+                                  {index + 1}
                                 </div>
+                              )}
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white dark:bg-slate-800 text-primary shadow-sm border border-slate-100 dark:border-slate-700">
+                                {file.type.startsWith('image/') ? <FileImage size={20} /> : <FileText size={20} />}
                               </div>
-                              <div className="flex flex-col gap-2">
-                                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Background Removed</span>
-                                <div 
-                                  className="h-64 sm:h-80 w-full rounded-xl overflow-hidden flex items-center justify-center p-4 border border-slate-200 dark:border-slate-800"
-                                  style={{ 
-                                    backgroundImage: isDarkMode
-                                      ? 'conic-gradient(#1e293b 25%, #0f172a 0 50%, #1e293b 0 75%, #0f172a 0)'
-                                      : 'conic-gradient(#f1f5f9 25%, #e2e8f0 0 50%, #f1f5f9 0 75%, #e2e8f0 0)', 
-                                    backgroundSize: '20px 20px' 
-                                  }}
-                                >
-                                  <img src={preview.processedUrl} alt="Background Removed" className="max-w-full max-h-full object-contain drop-shadow-lg" />
-                                </div>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-bold text-slate-900 dark:text-white">{file.name}</p>
+                                <p className="text-xs font-medium text-slate-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
                               </div>
                             </div>
-                          </div>
+                            <div className="flex items-center gap-1">
+                              {/* Reorder controls for merge */}
+                              {activeTool === 'merge' && files.length > 1 && (
+                                <div className="flex flex-col">
+                                  <button
+                                    type="button"
+                                    onClick={() => moveFileUp(index)}
+                                    disabled={index === 0}
+                                    className={cn(
+                                      "rounded p-1 transition-all",
+                                      index === 0
+                                        ? "text-slate-200 dark:text-slate-700 cursor-not-allowed"
+                                        : "text-slate-400 hover:bg-primary/10 hover:text-primary"
+                                    )}
+                                    aria-label="Move up"
+                                  >
+                                    <ChevronUp size={16} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => moveFileDown(index)}
+                                    disabled={index === files.length - 1}
+                                    className={cn(
+                                      "rounded p-1 transition-all",
+                                      index === files.length - 1
+                                        ? "text-slate-200 dark:text-slate-700 cursor-not-allowed"
+                                        : "text-slate-400 hover:bg-primary/10 hover:text-primary"
+                                    )}
+                                    aria-label="Move down"
+                                  >
+                                    <ChevronDown size={16} />
+                                  </button>
+                                </div>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => removeFile(index)}
+                                className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 transition-all"
+                                aria-label={`Remove ${file.name}`}
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                          </motion.div>
                         ))}
                       </div>
                     </motion.div>
                   )}
 
+                  {/* Page Thumbnails Grid */}
+                  {files.length > 0 && activeTool !== 'merge' && activeTool !== 'convert' && activeTool !== 'compress-image' && activeTool !== 'remove-bg' && activeTool !== 'svg-to-png' && activeTool !== 'jpg-to-png' && activeTool !== 'png-to-jpg' && activeTool !== 'image-to-webp' && activeTool !== 'webp-to-jpg' && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.15 }}
+                      className="card p-6"
+                    >
+                      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                          Page Preview
+                        </h3>
+                        {activeTool === 'organize' && organizeAction === 'reorder' && (
+                          <p className="text-sm text-primary bg-primary/10 px-3 py-1.5 rounded-md flex items-center gap-2 font-medium">
+                            <AlertCircle size={16} />
+                            You can also drag pages in page preview to organize in order
+                          </p>
+                        )}
+                      </div>
+                      {loadingThumbnails ? (
+                        <div className="flex flex-col items-center justify-center py-12 gap-3">
+                          <Loader2 className="animate-spin text-primary" size={32} />
+                          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Rendering pages…</p>
+                        </div>
+                      ) : thumbnails.length > 0 ? (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                          {thumbnails.map((thumb, index) => (
+                            <div
+                              key={thumb.pageNumber}
+                              draggable={activeTool === 'organize' && organizeAction === 'reorder'}
+                              onDragStart={(e) => handleDragStart(e, index)}
+                              onDragEnter={(e) => handleDragEnter(e, index)}
+                              onDragEnd={handleDragEnd}
+                              onDragOver={(e) => e.preventDefault()}
+                              className={cn(
+                                "group/thumb flex flex-col items-center gap-2 transition-all duration-200",
+                                activeTool === 'organize' && organizeAction === 'reorder' && "cursor-grab active:cursor-grabbing"
+                              )}
+                            >
+                              <div
+                                className="relative rounded-xl border-2 border-slate-100 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900 shadow-sm hover:border-primary/40 hover:shadow-md transition-all duration-200 cursor-pointer group/overlay"
+                                onClick={() => setPreviewIndex(index)}
+                              >
+                                <img
+                                  src={thumb.dataUrl}
+                                  alt={`Page ${thumb.pageNumber}`}
+                                  className="w-full h-auto block"
+                                  loading="lazy"
+                                />
+                                <div className="absolute inset-0 bg-black/0 group-hover/overlay:bg-black/20 transition-colors flex items-center justify-center">
+                                  <Maximize2 className="text-white opacity-0 group-hover/overlay:opacity-100 transition-opacity drop-shadow-md" size={32} />
+                                </div>
+                              </div>
+                              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 group-hover/thumb:text-primary transition-colors">
+                                {thumb.pageNumber}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-8">No pages to preview.</p>
+                      )}
+                    </motion.div>
+                  )}
 
-                </AnimatePresence>
+                  {/* Page Preview Modal */}
+                  <AnimatePresence>
+                    {previewIndex !== null && thumbnails[previewIndex] && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/95 backdrop-blur-sm"
+                        onClick={() => setPreviewIndex(null)}
+                      >
+                        <div className="absolute top-4 sm:top-6 left-4 sm:left-6 text-white font-medium bg-slate-800/80 px-3 sm:px-4 py-2 rounded-lg border border-slate-700 shadow-lg z-10 max-w-[45vw] sm:max-w-[60vw] truncate text-xs sm:text-base">
+                          Page Preview for {files[0]?.name}
+                        </div>
+
+                        <div className="absolute top-4 sm:top-6 right-4 sm:right-6 flex items-center gap-2 sm:gap-3 z-10">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDownloadPreviewPdf(); }}
+                            className="flex items-center gap-2 px-2 sm:px-3 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 shadow transition-all text-xs sm:text-sm font-medium"
+                            title="Download PDF Page"
+                          >
+                            <Download size={16} /> <span className="hidden sm:inline">PDF</span>
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDownloadPreviewPng(); }}
+                            className="flex items-center gap-2 px-2 sm:px-3 py-2 bg-white text-slate-800 rounded-lg hover:bg-slate-100 shadow transition-all text-xs sm:text-sm font-medium"
+                            title="Download PNG Image"
+                          >
+                            <Download size={16} /> <span className="hidden sm:inline">PNG</span>
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setPreviewIndex(null); }}
+                            className="p-2 text-white/70 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-all shadow border border-slate-700 ml-1 sm:ml-2"
+                          >
+                            <X size={20} />
+                          </button>
+                        </div>
+
+                        {/* Desktop Side Arrows */}
+                        {previewIndex > 0 && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setPreviewIndex(previewIndex - 1); }}
+                            className="hidden sm:flex absolute left-6 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-all z-10"
+                          >
+                            <ChevronLeft size={32} />
+                          </button>
+                        )}
+
+                        <motion.div
+                          initial={{ scale: 0.9, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          exit={{ scale: 0.9, opacity: 0 }}
+                          className="relative max-w-[95vw] max-h-[85vh] sm:max-h-[95vh] flex flex-col items-center pb-16 sm:pb-0"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="relative flex items-center justify-center min-h-[40vh] sm:min-h-[50vh] min-w-[50vw]">
+                            {isLoadingPreview && !highResPreview && (
+                              <div className="absolute inset-0 flex items-center justify-center z-10 bg-slate-900/20 backdrop-blur-sm rounded-lg">
+                                <Loader2 className="animate-spin text-white" size={48} />
+                              </div>
+                            )}
+                            <img
+                              src={highResPreview || thumbnails[previewIndex].dataUrl}
+                              alt={`Page ${thumbnails[previewIndex].pageNumber}`}
+                              className={cn(
+                                "max-w-[90vw] max-h-[80vh] sm:max-h-[90vh] object-contain rounded-lg shadow-2xl bg-white transition-opacity duration-300",
+                                isLoadingPreview && !highResPreview ? "opacity-50 blur-sm" : "opacity-100"
+                              )}
+                            />
+                          </div>
+
+                          {/* Desktop Page Number */}
+                          <div className="hidden sm:block mt-6 px-6 py-2 bg-slate-800 rounded-full text-white font-medium text-sm border border-slate-700 shadow-lg">
+                            Page {thumbnails[previewIndex].pageNumber} of {thumbnails.length}
+                          </div>
+                        </motion.div>
+
+                        {/* Mobile Bottom Navigation Bar */}
+                        <div className="sm:hidden fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center justify-between w-[90vw] max-w-sm bg-slate-800/95 backdrop-blur px-4 py-2 rounded-full border border-slate-700 shadow-2xl z-20">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setPreviewIndex(previewIndex - 1); }}
+                            disabled={previewIndex === 0}
+                            className="p-3 text-white/70 hover:text-white disabled:opacity-30 transition-all rounded-full hover:bg-white/10"
+                          >
+                            <ChevronLeft size={28} />
+                          </button>
+                          <div className="text-white font-medium text-sm">
+                            Page {thumbnails[previewIndex].pageNumber} of {thumbnails.length}
+                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setPreviewIndex(previewIndex + 1); }}
+                            disabled={previewIndex === thumbnails.length - 1}
+                            className="p-3 text-white/70 hover:text-white disabled:opacity-30 transition-all rounded-full hover:bg-white/10"
+                          >
+                            <ChevronRight size={28} />
+                          </button>
+                        </div>
+
+                        {/* Desktop Side Arrows */}
+                        {previewIndex < thumbnails.length - 1 && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setPreviewIndex(previewIndex + 1); }}
+                            className="hidden sm:flex absolute right-6 top-1/2 -translate-y-1/2 p-3 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 rounded-full transition-all z-10"
+                          >
+                            <ChevronRight size={32} />
+                          </button>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Previews & Downloads (Wide Layout) */}
+                  <AnimatePresence>
+                    {activeTool === 'remove-bg' && processedPreviews.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="card p-6 border border-slate-200 dark:border-slate-800"
+                      >
+                        <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-6">
+                          Background Removal Preview
+                        </h3>
+                        <div className="grid gap-8">
+                          {processedPreviews.map((preview, index) => (
+                            <div key={index} className="flex flex-col gap-4 border-b border-slate-100 dark:border-slate-800 last:border-b-0 pb-6 last:pb-0">
+                              {processedPreviews.length > 1 && (
+                                <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{preview.name}</span>
+                              )}
+                              <div className="grid sm:grid-cols-2 gap-6">
+                                <div className="flex flex-col gap-2">
+                                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Original</span>
+                                  <div className="h-64 sm:h-80 w-full bg-slate-50 dark:bg-slate-950 rounded-xl overflow-hidden flex items-center justify-center p-4 border border-slate-200 dark:border-slate-800">
+                                    <img src={preview.originalUrl} alt="Original" className="max-w-full max-h-full object-contain rounded" />
+                                  </div>
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Background Removed</span>
+                                  <div
+                                    className="h-64 sm:h-80 w-full rounded-xl overflow-hidden flex items-center justify-center p-4 border border-slate-200 dark:border-slate-800"
+                                    style={{
+                                      backgroundImage: isDarkMode
+                                        ? 'conic-gradient(#1e293b 25%, #0f172a 0 50%, #1e293b 0 75%, #0f172a 0)'
+                                        : 'conic-gradient(#f1f5f9 25%, #e2e8f0 0 50%, #f1f5f9 0 75%, #e2e8f0 0)',
+                                      backgroundSize: '20px 20px'
+                                    }}
+                                  >
+                                    <img src={preview.processedUrl} alt="Background Removed" className="max-w-full max-h-full object-contain drop-shadow-lg" />
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+
+
+                  </AnimatePresence>
                 </section>
 
                 <aside className="w-full lg:w-[380px] shrink-0 grid gap-8 lg:sticky lg:top-28">
@@ -1505,349 +1504,349 @@ function App() {
                     transition={{ delay: 0.2 }}
                     className="card p-8"
                   >
-                  <ToolOptions
-                    activeTool={activeTool}
-                    files={files}
-                    user={user}
-                    setError={setError}
-                    compressLevel={compressLevel}
-                    setCompressLevel={setCompressLevel}
-                    splitMode={splitMode}
-                    setSplitMode={setSplitMode}
-                    pageRange={pageRange}
-                    setPageRange={setPageRange}
-                    rotation={rotation}
-                    setRotation={setRotation}
-                    rotationMode={rotationMode}
-                    setRotationMode={setRotationMode}
-                    rotationPages={rotationPages}
-                    setRotationPages={setRotationPages}
-                    watermarkMode={watermarkMode}
-                    setWatermarkMode={setWatermarkMode}
-                    watermarkText={watermarkText}
-                    setWatermarkText={setWatermarkText}
-                    setWatermarkImage={setWatermarkImage}
-                    organizeAction={organizeAction}
-                    setOrganizeAction={setOrganizeAction}
-                    imageQuality={imageQuality}
-                    setImageQuality={setImageQuality}
-                    imageScale={imageScale}
-                    setImageScale={setImageScale}
-                    ocrLanguage={ocrLanguage}
-                    setOcrLanguage={setOcrLanguage}
-                    ocrAutoRotate={ocrAutoRotate}
-                    setOcrAutoRotate={setOcrAutoRotate}
-                    ocrDetectQr={ocrDetectQr}
-                    setOcrDetectQr={setOcrDetectQr}
-                    ocrExtractTables={ocrExtractTables}
-                    setOcrExtractTables={setOcrExtractTables}
-                    htmlContent={htmlContent}
-                    setHtmlContent={setHtmlContent}
-                    pdfPassword={pdfPassword}
-                    setPdfPassword={setPdfPassword}
-                  />
+                    <ToolOptions
+                      activeTool={activeTool}
+                      files={files}
+                      user={user}
+                      setError={setError}
+                      compressLevel={compressLevel}
+                      setCompressLevel={setCompressLevel}
+                      splitMode={splitMode}
+                      setSplitMode={setSplitMode}
+                      pageRange={pageRange}
+                      setPageRange={setPageRange}
+                      rotation={rotation}
+                      setRotation={setRotation}
+                      rotationMode={rotationMode}
+                      setRotationMode={setRotationMode}
+                      rotationPages={rotationPages}
+                      setRotationPages={setRotationPages}
+                      watermarkMode={watermarkMode}
+                      setWatermarkMode={setWatermarkMode}
+                      watermarkText={watermarkText}
+                      setWatermarkText={setWatermarkText}
+                      setWatermarkImage={setWatermarkImage}
+                      organizeAction={organizeAction}
+                      setOrganizeAction={setOrganizeAction}
+                      imageQuality={imageQuality}
+                      setImageQuality={setImageQuality}
+                      imageScale={imageScale}
+                      setImageScale={setImageScale}
+                      ocrLanguage={ocrLanguage}
+                      setOcrLanguage={setOcrLanguage}
+                      ocrAutoRotate={ocrAutoRotate}
+                      setOcrAutoRotate={setOcrAutoRotate}
+                      ocrDetectQr={ocrDetectQr}
+                      setOcrDetectQr={setOcrDetectQr}
+                      ocrExtractTables={ocrExtractTables}
+                      setOcrExtractTables={setOcrExtractTables}
+                      htmlContent={htmlContent}
+                      setHtmlContent={setHtmlContent}
+                      pdfPassword={pdfPassword}
+                      setPdfPassword={setPdfPassword}
+                    />
 
-                  <button
-                    type="button"
-                    onClick={processFile}
-                    disabled={!canProcess}
-                    className={cn(
-                      'btn btn-primary mt-8 w-full py-4 text-lg shadow-xl shadow-primary/20',
-                      !canProcess && 'opacity-50 grayscale cursor-not-allowed'
-                    )}
-                  >
-                    {loading ? <Loader2 className="animate-spin mr-2" size={24} /> : <selectedTool.lucideIcon className="mr-2" size={24} />}
-                    {loading ? 'Processing...' : `Start ${selectedTool.label}`}
-                  </button>
-
-                  {/* OCR Progress Display */}
-                  {loading && ocrProgress && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mt-6 rounded-2xl border border-blue-100 dark:border-blue-900/30 bg-blue-50 dark:bg-blue-900/10 p-6"
+                    <button
+                      type="button"
+                      onClick={processFile}
+                      disabled={!canProcess}
+                      className={cn(
+                        'btn btn-primary mt-8 w-full py-4 text-lg shadow-xl shadow-primary/20',
+                        !canProcess && 'opacity-50 grayscale cursor-not-allowed'
+                      )}
                     >
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-black uppercase tracking-widest text-blue-500 dark:text-blue-400">
-                          {ocrProgress.phase === 'rendering' && '📄 Rendering page'}
-                          {ocrProgress.phase === 'recognizing' && '🔍 Recognizing text'}
-                          {ocrProgress.phase === 'building' && '🏗️ Building PDF'}
-                        </span>
-                        <span className="text-sm font-bold text-blue-600 dark:text-blue-300">
-                          Page {ocrProgress.currentPage} of {ocrProgress.totalPages}
-                        </span>
-                      </div>
-                      <div className="w-full bg-blue-100 dark:bg-blue-900/30 rounded-full h-3 overflow-hidden">
-                        <motion.div
-                          className="h-full bg-gradient-to-r from-blue-500 to-primary rounded-full"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${ocrProgress.percent}%` }}
-                          transition={{ duration: 0.3, ease: 'easeOut' }}
-                        />
-                      </div>
-                      <p className="mt-2 text-xs font-medium text-blue-500 dark:text-blue-400 text-right">{ocrProgress.percent}%</p>
-                    </motion.div>
-                  )}
+                      {loading ? <Loader2 className="animate-spin mr-2" size={24} /> : <selectedTool.lucideIcon className="mr-2" size={24} />}
+                      {loading ? 'Processing...' : `Start ${selectedTool.label}`}
+                    </button>
 
-                  {/* Background Removal Progress Display */}
-                  {loading && bgProgress !== null && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mt-6 rounded-2xl border border-blue-100 dark:border-blue-900/30 bg-blue-50 dark:bg-blue-900/10 p-6"
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-black uppercase tracking-widest text-blue-500 dark:text-blue-400 animate-pulse">
-                          ⚡ Removing Background
-                        </span>
-                        <span className="text-sm font-bold text-blue-600 dark:text-blue-300">
-                          {bgProgress}%
-                        </span>
-                      </div>
-                      <div className="w-full bg-blue-100 dark:bg-blue-900/30 rounded-full h-3 overflow-hidden">
-                        <motion.div
-                          className="h-full bg-gradient-to-r from-blue-500 to-primary rounded-full"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${bgProgress}%` }}
-                          transition={{ duration: 0.3, ease: 'easeOut' }}
-                        />
-                      </div>
-                    </motion.div>
-                  )}
-                </motion.div>
-
-                <AnimatePresence>
-                  {downloadUrl && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      className="flex flex-col gap-4 rounded-2xl border border-emerald-100 dark:border-emerald-900/30 bg-emerald-50 dark:bg-emerald-900/10 p-6 text-emerald-900 dark:text-emerald-100 shadow-xl shadow-emerald-500/10 mt-6"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
-                          <CheckCircle size={24} />
-                        </div>
-                        <div>
-                          <h3 className="font-display text-lg font-extrabold tracking-tight">Ready to Download</h3>
-                          <p className="text-emerald-600 dark:text-emerald-400 text-sm font-medium mt-0.5">Processed successfully.</p>
-                        </div>
-                      </div>
-                      <a
-                        href={downloadUrl}
-                        download={`PDFQuill_${activeTool}${activeTool === 'split' && splitMode === 'all' ? '.zip' : (activeTool === 'pdf-to-image' || activeTool === 'compress-image' || activeTool === 'remove-bg' || activeTool === 'svg-to-png' || activeTool === 'jpg-to-png' || activeTool === 'png-to-jpg' || activeTool === 'image-to-webp' || activeTool === 'webp-to-jpg') ? `.${downloadExtension}` : '.pdf'}`}
-                        onClick={(e) => {
-                          if (isNative()) {
-                            e.preventDefault();
-                            const fileName = `PDFQuill_${activeTool}${activeTool === 'split' && splitMode === 'all' ? '.zip' : (activeTool === 'pdf-to-image' || activeTool === 'compress-image' || activeTool === 'remove-bg' || activeTool === 'svg-to-png' || activeTool === 'jpg-to-png' || activeTool === 'png-to-jpg' || activeTool === 'image-to-webp' || activeTool === 'webp-to-jpg') ? `.${downloadExtension}` : '.pdf'}`;
-                            handleNativeDownload(downloadUrl, fileName);
-                          }
-                        }}
-                        className="btn bg-emerald-600 text-white hover:bg-emerald-700 w-full py-3 text-base shadow-lg shadow-emerald-600/20 flex justify-center items-center mt-2"
+                    {/* OCR Progress Display */}
+                    {loading && ocrProgress && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mt-6 rounded-2xl border border-blue-100 dark:border-blue-900/30 bg-blue-50 dark:bg-blue-900/10 p-6"
                       >
-                        <Download size={18} className="mr-2" />
-                        Download File
-                      </a>
-                    </motion.div>
-                  )}
-
-                  {downloadUrls.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      className="flex flex-col gap-3 rounded-2xl border border-emerald-100 dark:border-emerald-900/30 bg-emerald-50 dark:bg-emerald-900/10 p-6 shadow-xl shadow-emerald-500/10 mt-6"
-                    >
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
-                          <CheckCircle size={20} />
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-xs font-black uppercase tracking-widest text-blue-500 dark:text-blue-400">
+                            {ocrProgress.phase === 'rendering' && '📄 Rendering page'}
+                            {ocrProgress.phase === 'recognizing' && '🔍 Recognizing text'}
+                            {ocrProgress.phase === 'building' && '🏗️ Building PDF'}
+                          </span>
+                          <span className="text-sm font-bold text-blue-600 dark:text-blue-300">
+                            Page {ocrProgress.currentPage} of {ocrProgress.totalPages}
+                          </span>
                         </div>
-                        <h3 className="font-display text-lg font-extrabold tracking-tight text-emerald-900 dark:text-emerald-100">Downloads Ready</h3>
-                      </div>
-                      {downloadUrls.map((dl, idx) => (
+                        <div className="w-full bg-blue-100 dark:bg-blue-900/30 rounded-full h-3 overflow-hidden">
+                          <motion.div
+                            className="h-full bg-gradient-to-r from-blue-500 to-primary rounded-full"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${ocrProgress.percent}%` }}
+                            transition={{ duration: 0.3, ease: 'easeOut' }}
+                          />
+                        </div>
+                        <p className="mt-2 text-xs font-medium text-blue-500 dark:text-blue-400 text-right">{ocrProgress.percent}%</p>
+                      </motion.div>
+                    )}
+
+                    {/* Background Removal Progress Display */}
+                    {loading && bgProgress !== null && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mt-6 rounded-2xl border border-blue-100 dark:border-blue-900/30 bg-blue-50 dark:bg-blue-900/10 p-6"
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-xs font-black uppercase tracking-widest text-blue-500 dark:text-blue-400 animate-pulse">
+                            ⚡ Removing Background
+                          </span>
+                          <span className="text-sm font-bold text-blue-600 dark:text-blue-300">
+                            {bgProgress}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-blue-100 dark:bg-blue-900/30 rounded-full h-3 overflow-hidden">
+                          <motion.div
+                            className="h-full bg-gradient-to-r from-blue-500 to-primary rounded-full"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${bgProgress}%` }}
+                            transition={{ duration: 0.3, ease: 'easeOut' }}
+                          />
+                        </div>
+                      </motion.div>
+                    )}
+                  </motion.div>
+
+                  <AnimatePresence>
+                    {downloadUrl && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="flex flex-col gap-4 rounded-2xl border border-emerald-100 dark:border-emerald-900/30 bg-emerald-50 dark:bg-emerald-900/10 p-6 text-emerald-900 dark:text-emerald-100 shadow-xl shadow-emerald-500/10 mt-6"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle size={24} />
+                          </div>
+                          <div>
+                            <h3 className="font-display text-lg font-extrabold tracking-tight">Ready to Download</h3>
+                            <p className="text-emerald-600 dark:text-emerald-400 text-sm font-medium mt-0.5">Processed successfully.</p>
+                          </div>
+                        </div>
                         <a
-                          key={idx}
-                          href={dl.url}
-                          download={dl.name}
+                          href={downloadUrl}
+                          download={`PDFQuill_${activeTool}${activeTool === 'split' && splitMode === 'all' ? '.zip' : (activeTool === 'pdf-to-image' || activeTool === 'compress-image' || activeTool === 'remove-bg' || activeTool === 'svg-to-png' || activeTool === 'jpg-to-png' || activeTool === 'png-to-jpg' || activeTool === 'image-to-webp' || activeTool === 'webp-to-jpg') ? `.${downloadExtension}` : '.pdf'}`}
                           onClick={(e) => {
                             if (isNative()) {
                               e.preventDefault();
-                              handleNativeDownload(dl.url, dl.name);
+                              const fileName = `PDFQuill_${activeTool}${activeTool === 'split' && splitMode === 'all' ? '.zip' : (activeTool === 'pdf-to-image' || activeTool === 'compress-image' || activeTool === 'remove-bg' || activeTool === 'svg-to-png' || activeTool === 'jpg-to-png' || activeTool === 'png-to-jpg' || activeTool === 'image-to-webp' || activeTool === 'webp-to-jpg') ? `.${downloadExtension}` : '.pdf'}`;
+                              handleNativeDownload(downloadUrl, fileName);
                             }
                           }}
-                          className="btn bg-emerald-600 text-white hover:bg-emerald-700 w-full py-3 text-sm shadow-sm shadow-emerald-600/20 flex justify-center items-center"
+                          className="btn bg-emerald-600 text-white hover:bg-emerald-700 w-full py-3 text-base shadow-lg shadow-emerald-600/20 flex justify-center items-center mt-2"
                         >
-                          <Download size={16} className="mr-2" />
-                          Download {dl.name.replace('.pdf', '').replace('_', ' ')}
+                          <Download size={18} className="mr-2" />
+                          Download File
                         </a>
-                      ))}
-                    </motion.div>
-                  )}
+                      </motion.div>
+                    )}
 
-                  {error && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.9 }}
-                      className="flex items-center gap-4 rounded-2xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-6 py-4 text-red-600 dark:text-red-400 shadow-sm"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
-                        <AlertCircle size={20} />
-                      </div>
-                      <p className="text-sm font-bold">{error}</p>
-                    </motion.div>
-   
-                  )}
-
-                  {/* OCR Extracted Text Results */}
-                  {ocrTextResult && activeTool === 'ocr-extract' && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      className="flex flex-col gap-4 rounded-2xl border border-violet-100 dark:border-violet-900/30 bg-violet-50 dark:bg-violet-900/10 p-6 shadow-xl shadow-violet-500/10"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-600 dark:text-violet-400">
-                            <FileSearch size={20} />
+                    {downloadUrls.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="flex flex-col gap-3 rounded-2xl border border-emerald-100 dark:border-emerald-900/30 bg-emerald-50 dark:bg-emerald-900/10 p-6 shadow-xl shadow-emerald-500/10 mt-6"
+                      >
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle size={20} />
                           </div>
-                          <div>
-                            <h3 className="font-display text-lg font-extrabold text-slate-900 dark:text-white">Text Extracted</h3>
-                            <p className="text-xs font-medium text-violet-500">
-                              {ocrTextResult.pages.length} page{ocrTextResult.pages.length !== 1 ? 's' : ''} · Avg. confidence: {ocrTextResult.confidence}%
-                            </p>
-                          </div>
+                          <h3 className="font-display text-lg font-extrabold tracking-tight text-emerald-900 dark:text-emerald-100">Downloads Ready</h3>
                         </div>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(ocrTextResult.text);
-                          }}
-                          className="btn btn-secondary flex items-center gap-2 text-sm"
-                          title="Copy to clipboard"
-                        >
-                          <Copy size={16} /> Copy
-                        </button>
-                      </div>
-
-                      {/* Confidence badges per page */}
-                      <div className="flex flex-wrap gap-2">
-                        {ocrTextResult.pages.map((page) => (
-                          <span
-                            key={page.pageNumber}
-                            className={cn(
-                              'inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold',
-                              page.confidence >= 90
-                                ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
-                                : page.confidence >= 70
-                                  ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
-                                  : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
-                            )}
+                        {downloadUrls.map((dl, idx) => (
+                          <a
+                            key={idx}
+                            href={dl.url}
+                            download={dl.name}
+                            onClick={(e) => {
+                              if (isNative()) {
+                                e.preventDefault();
+                                handleNativeDownload(dl.url, dl.name);
+                              }
+                            }}
+                            className="btn bg-emerald-600 text-white hover:bg-emerald-700 w-full py-3 text-sm shadow-sm shadow-emerald-600/20 flex justify-center items-center"
                           >
-                            P{page.pageNumber}: {page.confidence}%
-                          </span>
+                            <Download size={16} className="mr-2" />
+                            Download {dl.name.replace('.pdf', '').replace('_', ' ')}
+                          </a>
                         ))}
-                      </div>
+                      </motion.div>
+                    )}
 
-                      {/* Text preview */}
-                      <div className="max-h-80 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4">
-                        <pre className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-mono leading-relaxed">
-                          {ocrTextResult.text}
-                        </pre>
-                      </div>
+                    {error && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        className="flex items-center gap-4 rounded-2xl border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 px-6 py-4 text-red-600 dark:text-red-400 shadow-sm"
+                      >
+                        <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center shrink-0">
+                          <AlertCircle size={20} />
+                        </div>
+                        <p className="text-sm font-bold">{error}</p>
+                      </motion.div>
 
-                      {/* QR Codes */}
-                      {ocrTextResult.qrs && ocrTextResult.qrs.length > 0 && (
-                        <div className="mt-2 space-y-2">
-                          <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">Detected QR Codes:</h4>
-                          {ocrTextResult.qrs.map((qr, idx) => (
-                            <div key={idx} className="flex items-center justify-between bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
-                              <span className="text-sm font-mono text-slate-600 dark:text-slate-400 break-all">{qr}</span>
-                              <button
-                                onClick={() => navigator.clipboard.writeText(qr)}
-                                className="btn btn-secondary text-xs px-3 py-1"
-                              >
-                                Copy
-                              </button>
+                    )}
+
+                    {/* OCR Extracted Text Results */}
+                    {ocrTextResult && activeTool === 'ocr-extract' && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="flex flex-col gap-4 rounded-2xl border border-violet-100 dark:border-violet-900/30 bg-violet-50 dark:bg-violet-900/10 p-6 shadow-xl shadow-violet-500/10"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center text-violet-600 dark:text-violet-400">
+                              <FileSearch size={20} />
                             </div>
+                            <div>
+                              <h3 className="font-display text-lg font-extrabold text-slate-900 dark:text-white">Text Extracted</h3>
+                              <p className="text-xs font-medium text-violet-500">
+                                {ocrTextResult.pages.length} page{ocrTextResult.pages.length !== 1 ? 's' : ''} · Avg. confidence: {ocrTextResult.confidence}%
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(ocrTextResult.text);
+                            }}
+                            className="btn btn-secondary flex items-center gap-2 text-sm"
+                            title="Copy to clipboard"
+                          >
+                            <Copy size={16} /> Copy
+                          </button>
+                        </div>
+
+                        {/* Confidence badges per page */}
+                        <div className="flex flex-wrap gap-2">
+                          {ocrTextResult.pages.map((page) => (
+                            <span
+                              key={page.pageNumber}
+                              className={cn(
+                                'inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold',
+                                page.confidence >= 90
+                                  ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                                  : page.confidence >= 70
+                                    ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                                    : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                              )}
+                            >
+                              P{page.pageNumber}: {page.confidence}%
+                            </span>
                           ))}
                         </div>
-                      )}
 
-                      {/* Downloads */}
-                      <div className="flex flex-col gap-3 mt-2">
-                        <a
-                          href={URL.createObjectURL(new Blob([ocrTextResult.text], { type: 'text/plain' }))}
-                          download="PDFQuill_extracted_text.txt"
-                          className="w-full btn bg-violet-600 text-white hover:bg-violet-700 px-6 py-3 text-sm shadow-lg shadow-violet-600/20 flex items-center justify-center gap-2"
-                        >
-                          <Download size={18} /> Download as .txt
-                        </a>
-                        
-                        {ocrTextResult.csv && (
-                          <a
-                            href={URL.createObjectURL(new Blob([ocrTextResult.csv], { type: 'text/csv' }))}
-                            download="PDFQuill_extracted_tables.csv"
-                            className="w-full btn bg-emerald-600 text-white hover:bg-emerald-700 px-6 py-3 text-sm shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2"
-                          >
-                            <Download size={18} /> Download Tables as .csv
-                          </a>
-                        )}
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* Markdown Conversion Result */}
-                  {markdownResult && activeTool === 'pdf-to-markdown' && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      className="flex flex-col gap-4 rounded-2xl border border-cyan-100 dark:border-cyan-900/30 bg-cyan-50 dark:bg-cyan-900/10 p-6 shadow-xl shadow-cyan-500/10"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center text-cyan-600 dark:text-cyan-400">
-                            <FileCode2 size={20} />
-                          </div>
-                          <div>
-                            <h3 className="font-display text-lg font-extrabold text-slate-900 dark:text-white">Markdown Ready</h3>
-                            <p className="text-xs font-medium text-cyan-500">
-                              {markdownResult.text.length.toLocaleString()} characters
-                            </p>
-                          </div>
+                        {/* Text preview */}
+                        <div className="max-h-80 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4">
+                          <pre className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-mono leading-relaxed">
+                            {ocrTextResult.text}
+                          </pre>
                         </div>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(markdownResult.text);
-                          }}
-                          className="btn btn-secondary flex items-center gap-2 text-sm"
-                          title="Copy to clipboard"
-                        >
-                          <Copy size={16} /> Copy
-                        </button>
-                      </div>
 
-                      {/* Markdown preview */}
-                      <div className="max-h-80 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4">
-                        <pre className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-mono leading-relaxed">
-                          {markdownResult.text}
-                        </pre>
-                      </div>
+                        {/* QR Codes */}
+                        {ocrTextResult.qrs && ocrTextResult.qrs.length > 0 && (
+                          <div className="mt-2 space-y-2">
+                            <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">Detected QR Codes:</h4>
+                            {ocrTextResult.qrs.map((qr, idx) => (
+                              <div key={idx} className="flex items-center justify-between bg-white dark:bg-slate-800 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
+                                <span className="text-sm font-mono text-slate-600 dark:text-slate-400 break-all">{qr}</span>
+                                <button
+                                  onClick={() => navigator.clipboard.writeText(qr)}
+                                  className="btn btn-secondary text-xs px-3 py-1"
+                                >
+                                  Copy
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
 
-                      {/* Download */}
-                      <div className="flex flex-col gap-3 mt-2">
-                        <a
-                          href={URL.createObjectURL(new Blob([markdownResult.text], { type: 'text/markdown' }))}
-                          download="PDFQuill_converted.md"
-                          className="w-full btn bg-cyan-600 text-white hover:bg-cyan-700 px-6 py-3 text-sm shadow-lg shadow-cyan-600/20 flex items-center justify-center gap-2"
-                        >
-                          <Download size={18} /> Download as .md
-                        </a>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                        {/* Downloads */}
+                        <div className="flex flex-col gap-3 mt-2">
+                          <a
+                            href={URL.createObjectURL(new Blob([ocrTextResult.text], { type: 'text/plain' }))}
+                            download="PDFQuill_extracted_text.txt"
+                            className="w-full btn bg-violet-600 text-white hover:bg-violet-700 px-6 py-3 text-sm shadow-lg shadow-violet-600/20 flex items-center justify-center gap-2"
+                          >
+                            <Download size={18} /> Download as .txt
+                          </a>
+
+                          {ocrTextResult.csv && (
+                            <a
+                              href={URL.createObjectURL(new Blob([ocrTextResult.csv], { type: 'text/csv' }))}
+                              download="PDFQuill_extracted_tables.csv"
+                              className="w-full btn bg-emerald-600 text-white hover:bg-emerald-700 px-6 py-3 text-sm shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2"
+                            >
+                              <Download size={18} /> Download Tables as .csv
+                            </a>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {/* Markdown Conversion Result */}
+                    {markdownResult && activeTool === 'pdf-to-markdown' && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="flex flex-col gap-4 rounded-2xl border border-cyan-100 dark:border-cyan-900/30 bg-cyan-50 dark:bg-cyan-900/10 p-6 shadow-xl shadow-cyan-500/10"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center text-cyan-600 dark:text-cyan-400">
+                              <FileCode2 size={20} />
+                            </div>
+                            <div>
+                              <h3 className="font-display text-lg font-extrabold text-slate-900 dark:text-white">Markdown Ready</h3>
+                              <p className="text-xs font-medium text-cyan-500">
+                                {markdownResult.text.length.toLocaleString()} characters
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(markdownResult.text);
+                            }}
+                            className="btn btn-secondary flex items-center gap-2 text-sm"
+                            title="Copy to clipboard"
+                          >
+                            <Copy size={16} /> Copy
+                          </button>
+                        </div>
+
+                        {/* Markdown preview */}
+                        <div className="max-h-80 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-4">
+                          <pre className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-mono leading-relaxed">
+                            {markdownResult.text}
+                          </pre>
+                        </div>
+
+                        {/* Download */}
+                        <div className="flex flex-col gap-3 mt-2">
+                          <a
+                            href={URL.createObjectURL(new Blob([markdownResult.text], { type: 'text/markdown' }))}
+                            download="PDFQuill_converted.md"
+                            className="w-full btn bg-cyan-600 text-white hover:bg-cyan-700 px-6 py-3 text-sm shadow-lg shadow-cyan-600/20 flex items-center justify-center gap-2"
+                          >
+                            <Download size={18} /> Download as .md
+                          </a>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </aside>
               </div>
             </div>
@@ -1874,10 +1873,10 @@ function App() {
             <button onClick={() => navigate('/terms')} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Terms</button>
             <a className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest" href="https://github.com/Himal-Joshi/PDFQuill" target="_blank" rel="noopener noreferrer">Github</a>
             <a className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest" href="https://github.com/Himal-Joshi/PDFQuill" target="_blank" rel="noopener noreferrer">Contact</a>
-            
-            <a 
-              href="https://buymemomo.com/Himal_Joshi" 
-              target="_blank" 
+
+            <a
+              href="https://buymemomo.com/Himal_Joshi"
+              target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-center gap-1.5 bg-white rounded-lg px-2.5 py-1.5 shadow-sm hover:shadow hover:-translate-y-0.5 transition-all"
             >
@@ -2008,9 +2007,9 @@ function ToolOptions({
           </div>
         </Field>
         {files.length > 0 && (
-           <div className="text-sm text-center font-medium text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 py-3 rounded-xl border border-slate-100 dark:border-slate-800">
-             Original PDF Size: <span className="font-bold text-slate-900 dark:text-white">{sizeInMB} MB</span>
-           </div>
+          <div className="text-sm text-center font-medium text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 py-3 rounded-xl border border-slate-100 dark:border-slate-800">
+            Original PDF Size: <span className="font-bold text-slate-900 dark:text-white">{sizeInMB} MB</span>
+          </div>
         )}
       </div>
     );
@@ -2261,12 +2260,12 @@ function ToolOptions({
             ))}
           </select>
         </Field>
-        
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label className="flex items-start gap-3 cursor-pointer group">
             <div className="relative flex items-start">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={ocrAutoRotate}
                 onChange={(e) => setOcrAutoRotate(e.target.checked)}
                 className="peer sr-only"
@@ -2283,8 +2282,8 @@ function ToolOptions({
 
           <label className="flex items-start gap-3 cursor-pointer group">
             <div className="relative flex items-start">
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={ocrDetectQr}
                 onChange={(e) => setOcrDetectQr(e.target.checked)}
                 className="peer sr-only"
@@ -2302,8 +2301,8 @@ function ToolOptions({
           {activeTool === 'ocr-extract' && (
             <label className="flex items-start gap-3 cursor-pointer group col-span-full sm:col-span-1">
               <div className="relative flex items-start">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   checked={ocrExtractTables}
                   onChange={(e) => setOcrExtractTables(e.target.checked)}
                   className="peer sr-only"
@@ -2518,12 +2517,12 @@ function PricingView({ user }: { user: { email: string; token: string } | null }
         <div className="inline-block bg-primary/10 text-primary px-4 py-2 rounded-full font-bold text-sm mb-8">
           Note: The Beta version is completely free!
         </div>
-        
+
         <div className="flex flex-col items-center justify-center p-6 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm text-center max-w-2xl mx-auto">
           <p className="text-slate-600 dark:text-slate-300 mb-4 text-sm font-medium">PDFQuill is developed and maintained entirely for free. If it helps you out, consider supporting!</p>
-          <a 
-            href="https://buymemomo.com/Himal_Joshi" 
-            target="_blank" 
+          <a
+            href="https://buymemomo.com/Himal_Joshi"
+            target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 bg-white p-2 px-5 rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
           >
@@ -2535,7 +2534,7 @@ function PricingView({ user }: { user: { email: string; token: string } | null }
           </a>
         </div>
       </div>
-      
+
       <div className="grid sm:grid-cols-3 gap-8">
         {plans.map((plan) => (
           <div key={plan.name} className="card p-8 flex flex-col">
@@ -2641,7 +2640,7 @@ function LoginView({ onLogin }: { onLogin: (user: { email: string; token: string
       <div className="card p-10 backdrop-blur-xl bg-white/60 dark:bg-slate-900/60 border border-white/20 dark:border-slate-800/50 shadow-2xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-bl-[100px] -mr-16 -mt-16 blur-2xl"></div>
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-500/10 rounded-tr-[100px] -ml-12 -mb-12 blur-xl"></div>
-        
+
         <div className="relative z-10 text-center">
           <div className="mb-8">
             <h2 className="text-3xl font-display font-extrabold text-slate-900 dark:text-white tracking-tight">
@@ -2677,10 +2676,10 @@ function LoginView({ onLogin }: { onLogin: (user: { email: string; token: string
             ) : (
               <>
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                 </svg>
                 Sign in with Google
               </>
@@ -2735,7 +2734,7 @@ function DocsView() {
 
   const filteredSections = sections.map(s => ({
     ...s,
-    topics: s.topics.filter(t => 
+    topics: s.topics.filter(t =>
       t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.desc.toLowerCase().includes(searchQuery.toLowerCase())
     )
@@ -2751,7 +2750,7 @@ function DocsView() {
             <p className="text-lg text-slate-900 dark:text-slate-100 font-medium">
               Welcome to PDFQuill, the web's most elegant, private, and powerful client-side PDF toolkit. Follow these simple steps to start processing your documents.
             </p>
-            
+
             <div className="grid gap-6 mt-8">
               {[
                 { step: '1', title: 'Select a Tool', text: 'Browse the dashboard and select the tool you need (e.g., Merge PDF, Compress PDF, AI OCR, etc.).' },
@@ -3197,8 +3196,8 @@ function DocsView() {
                           onClick={() => setSelectedTopic(t.name)}
                           className={cn(
                             "w-full text-left flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200",
-                            isActive 
-                              ? "bg-primary text-white shadow-md shadow-primary/20" 
+                            isActive
+                              ? "bg-primary text-white shadow-md shadow-primary/20"
                               : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100"
                           )}
                         >
@@ -3248,7 +3247,7 @@ function DocsView() {
 }
 
 function GetStartedView() {
-  const [activeTutorial, setActiveTutorial] = useState<{title: string, desc: string, videoUrl: string} | null>(null);
+  const [activeTutorial, setActiveTutorial] = useState<{ title: string, desc: string, videoUrl: string } | null>(null);
 
   return (
     <div className="text-center">
@@ -3313,12 +3312,12 @@ function GetStartedView() {
                 </button>
               </div>
               <div className="aspect-video bg-black relative flex items-center justify-center overflow-hidden">
-                <video 
-                  src={activeTutorial.videoUrl} 
-                  autoPlay 
-                  loop 
-                  muted 
-                  controls 
+                <video
+                  src={activeTutorial.videoUrl}
+                  autoPlay
+                  loop
+                  muted
+                  controls
                   className="w-full h-full object-cover"
                 >
                   Your browser does not support the video tag.
