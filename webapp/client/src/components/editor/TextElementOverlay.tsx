@@ -7,7 +7,7 @@ interface TextElementOverlayProps {
   isSelected: boolean;
   scale: number;
   onSelect: () => void;
-  onChange: (updated: Partial<TextElement>) => void;
+  onChange: (updated: Partial<TextElement>, commitToHistory?: boolean) => void;
   onDelete: () => void;
   onDuplicate: () => void;
 }
@@ -25,11 +25,16 @@ export function TextElementOverlay({
   onDuplicate,
 }: TextElementOverlayProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [localText, setLocalText] = useState(element.text);
   const isDraggingRef = useRef(false);
   const dragStartRef = useRef<{ x: number; y: number; elemX: number; elemY: number }>({ x: 0, y: 0, elemX: 0, elemY: 0 });
   const isResizingRef = useRef(false);
   const resizeStartRef = useRef<{ x: number; y: number; elemW: number; elemH: number }>({ x: 0, y: 0, elemW: 0, elemH: 0 });
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    setLocalText(element.text);
+  }, [element.text]);
 
   // Focus textarea when editing starts
   useEffect(() => {
@@ -52,18 +57,25 @@ export function TextElementOverlay({
       elemY: element.y,
     };
 
+    let latestX = element.x;
+    let latestY = element.y;
+
     const handlePointerMove = (moveEvent: globalThis.PointerEvent) => {
       if (!isDraggingRef.current) return;
       const dx = (moveEvent.clientX - dragStartRef.current.x) / scale;
       const dy = (moveEvent.clientY - dragStartRef.current.y) / scale;
-      onChange({
-        x: Math.max(0, dragStartRef.current.elemX + dx),
-        y: Math.max(0, dragStartRef.current.elemY + dy),
-      });
+      latestX = Math.max(0, dragStartRef.current.elemX + dx);
+      latestY = Math.max(0, dragStartRef.current.elemY + dy);
+      // Live move without clogging history
+      onChange({ x: latestX, y: latestY }, false);
     };
 
     const handlePointerUp = () => {
-      isDraggingRef.current = false;
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false;
+        // Commit final coordinate to history
+        onChange({ x: latestX, y: latestY }, true);
+      }
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
     };
@@ -82,24 +94,36 @@ export function TextElementOverlay({
       elemH: element.height,
     };
 
+    let latestW = element.width;
+    let latestH = element.height;
+
     const handlePointerMove = (moveEvent: globalThis.PointerEvent) => {
       if (!isResizingRef.current) return;
       const dx = (moveEvent.clientX - resizeStartRef.current.x) / scale;
       const dy = (moveEvent.clientY - resizeStartRef.current.y) / scale;
-      onChange({
-        width: Math.max(60, resizeStartRef.current.elemW + dx),
-        height: Math.max(24, resizeStartRef.current.elemH + dy),
-      });
+      latestW = Math.max(60, resizeStartRef.current.elemW + dx);
+      latestH = Math.max(24, resizeStartRef.current.elemH + dy);
+      onChange({ width: latestW, height: latestH }, false);
     };
 
     const handlePointerUp = () => {
-      isResizingRef.current = false;
+      if (isResizingRef.current) {
+        isResizingRef.current = false;
+        onChange({ width: latestW, height: latestH }, true);
+      }
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
     };
 
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', handlePointerUp);
+  };
+
+  const handleTextBlur = () => {
+    setIsEditing(false);
+    if (localText !== element.text) {
+      onChange({ text: localText }, true);
+    }
   };
 
   const getFontFamilyStyle = (font: FontChoice) => {
@@ -137,7 +161,7 @@ export function TextElementOverlay({
           {/* Font Family */}
           <select
             value={element.fontFamily}
-            onChange={(e) => onChange({ fontFamily: e.target.value as FontChoice })}
+            onChange={(e) => onChange({ fontFamily: e.target.value as FontChoice }, true)}
             className="bg-transparent border-none text-slate-700 dark:text-slate-200 font-medium py-0.5 px-1 rounded cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none"
           >
             <option value="Helvetica">Helvetica</option>
@@ -150,7 +174,7 @@ export function TextElementOverlay({
           {/* Font Size */}
           <select
             value={element.fontSize}
-            onChange={(e) => onChange({ fontSize: Number(e.target.value) })}
+            onChange={(e) => onChange({ fontSize: Number(e.target.value) }, true)}
             className="bg-transparent border-none text-slate-700 dark:text-slate-200 font-medium py-0.5 px-1 rounded cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none"
           >
             {FONT_SIZES.map((size) => (
@@ -165,7 +189,7 @@ export function TextElementOverlay({
           {/* Bold */}
           <button
             type="button"
-            onClick={() => onChange({ bold: !element.bold })}
+            onClick={() => onChange({ bold: !element.bold }, true)}
             className={`p-1 rounded transition-colors ${
               element.bold ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-600' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
@@ -177,7 +201,7 @@ export function TextElementOverlay({
           {/* Italic */}
           <button
             type="button"
-            onClick={() => onChange({ italic: !element.italic })}
+            onClick={() => onChange({ italic: !element.italic }, true)}
             className={`p-1 rounded transition-colors ${
               element.italic ? 'bg-indigo-100 dark:bg-indigo-950 text-indigo-600' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
@@ -194,7 +218,7 @@ export function TextElementOverlay({
               <button
                 key={col}
                 type="button"
-                onClick={() => onChange({ color: col })}
+                onClick={() => onChange({ color: col }, true)}
                 className={`w-3.5 h-3.5 rounded-full border ${
                   element.color === col ? 'ring-2 ring-indigo-500 scale-110' : 'border-slate-300 dark:border-slate-600'
                 }`}
@@ -231,9 +255,9 @@ export function TextElementOverlay({
       {isEditing ? (
         <textarea
           ref={textareaRef}
-          value={element.text}
-          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => onChange({ text: e.target.value })}
-          onBlur={() => setIsEditing(false)}
+          value={localText}
+          onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setLocalText(e.target.value)}
+          onBlur={handleTextBlur}
           className="w-full h-full p-1 resize-none bg-white/95 dark:bg-slate-900/95 border border-indigo-400 rounded outline-none text-slate-900 dark:text-white"
           style={{
             fontSize: `${element.fontSize * scale}px`,

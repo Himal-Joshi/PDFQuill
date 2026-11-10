@@ -17,6 +17,7 @@ export function SignatureModal({ isOpen, onClose, onSaveSignature }: SignatureMo
   const [activeTab, setActiveTab] = useState<'draw' | 'upload'>('draw');
   const [penColor, setPenColor] = useState('#0f172a');
   const [hasDrawn, setHasDrawn] = useState(false);
+  const [rawUploadedDataUrl, setRawUploadedDataUrl] = useState<string | null>(null);
   const [uploadedDataUrl, setUploadedDataUrl] = useState<string | null>(null);
   const [removeBg, setRemoveBg] = useState(true);
 
@@ -53,6 +54,50 @@ export function SignatureModal({ isOpen, onClose, onSaveSignature }: SignatureMo
       clearCanvas();
     }
   }, [isOpen, activeTab, clearCanvas, penColor]);
+
+  // Reactive image rasterization to PNG & white background removal
+  useEffect(() => {
+    if (!rawUploadedDataUrl) {
+      setUploadedDataUrl(null);
+      return;
+    }
+
+    const img = new window.Image();
+    img.onload = () => {
+      const offCanvas = document.createElement('canvas');
+      const w = img.naturalWidth || img.width || 400;
+      const h = img.naturalHeight || img.height || 200;
+      offCanvas.width = w;
+      offCanvas.height = h;
+
+      const ctx = offCanvas.getContext('2d');
+      if (!ctx) {
+        setUploadedDataUrl(rawUploadedDataUrl);
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0);
+
+      if (removeBg) {
+        const imgData = ctx.getImageData(0, 0, w, h);
+        const d = imgData.data;
+        for (let i = 0; i < d.length; i += 4) {
+          const r = d[i];
+          const g = d[i + 1];
+          const b = d[i + 2];
+          // If close to white (brightness > 215)
+          if (r > 215 && g > 215 && b > 215) {
+            d[i + 3] = 0; // transparent
+          }
+        }
+        ctx.putImageData(imgData, 0, 0);
+      }
+
+      // Always standardize to PNG data URL so pdf-lib embeds safely
+      setUploadedDataUrl(offCanvas.toDataURL('image/png'));
+    };
+    img.src = rawUploadedDataUrl;
+  }, [rawUploadedDataUrl, removeBg]);
 
   if (!isOpen) return null;
 
@@ -135,7 +180,7 @@ export function SignatureModal({ isOpen, onClose, onSaveSignature }: SignatureMo
       return null;
     }
 
-    // Add 10px padding
+    // Add 12px padding
     const padding = 12;
     minX = Math.max(0, minX - padding);
     minY = Math.max(0, minY - padding);
@@ -167,41 +212,7 @@ export function SignatureModal({ isOpen, onClose, onSaveSignature }: SignatureMo
     reader.onload = (loadEvent) => {
       const dataUrl = loadEvent.target?.result as string;
       if (!dataUrl) return;
-
-      if (!removeBg) {
-        setUploadedDataUrl(dataUrl);
-        return;
-      }
-
-      // Automatically strip white background
-      const img = new window.Image();
-      img.onload = () => {
-        const offCanvas = document.createElement('canvas');
-        offCanvas.width = img.width;
-        offCanvas.height = img.height;
-        const ctx = offCanvas.getContext('2d');
-        if (!ctx) {
-          setUploadedDataUrl(dataUrl);
-          return;
-        }
-
-        ctx.drawImage(img, 0, 0);
-        const imgData = ctx.getImageData(0, 0, img.width, img.height);
-        const d = imgData.data;
-
-        for (let i = 0; i < d.length; i += 4) {
-          const r = d[i];
-          const g = d[i + 1];
-          const b = d[i + 2];
-          // If close to white (brightness > 225)
-          if (r > 220 && g > 220 && b > 220) {
-            d[i + 3] = 0; // transparent
-          }
-        }
-        ctx.putImageData(imgData, 0, 0);
-        setUploadedDataUrl(offCanvas.toDataURL('image/png'));
-      };
-      img.src = dataUrl;
+      setRawUploadedDataUrl(dataUrl);
     };
     reader.readAsDataURL(file);
   };

@@ -1,16 +1,17 @@
 export function canvasToPdfCoords(
   elem: { x: number; y: number; width: number; height: number },
-  canvasSize: { width: number; height: number },
-  pdfSize: { width: number; height: number }
+  canvasSize?: { width: number; height: number },
+  pdfSize?: { width: number; height: number }
 ): { x: number; y: number; width: number; height: number } {
-  const scaleX = pdfSize.width / canvasSize.width;
-  const scaleY = pdfSize.height / canvasSize.height;
+  const scaleX = (canvasSize && pdfSize && canvasSize.width > 0) ? pdfSize.width / canvasSize.width : 1;
+  const scaleY = (canvasSize && pdfSize && canvasSize.height > 0) ? pdfSize.height / canvasSize.height : 1;
+  const totalPdfHeight = pdfSize ? pdfSize.height : (canvasSize ? canvasSize.height : elem.y + elem.height);
 
   const pdfWidth = elem.width * scaleX;
   const pdfHeight = elem.height * scaleY;
   const pdfX = elem.x * scaleX;
   // Browser top-left (0,0) to PDF bottom-left (0,0)
-  const pdfY = pdfSize.height - ((elem.y + elem.height) * scaleY);
+  const pdfY = totalPdfHeight - ((elem.y + elem.height) * scaleY);
 
   return {
     x: Math.round(pdfX * 100) / 100,

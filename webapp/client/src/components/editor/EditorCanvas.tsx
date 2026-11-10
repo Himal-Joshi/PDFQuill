@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback, type MouseEvent } from 'react
 import type { EditorElement, TextElement, ImageElement, StampElement, EditorToolMode } from './types.ts';
 import { TextElementOverlay } from './TextElementOverlay.tsx';
 import { ImageElementOverlay } from './ImageElementOverlay.tsx';
+import { StampElementOverlay } from './StampElementOverlay.tsx';
 
 interface EditorCanvasProps {
   pdfDoc: any;
@@ -12,7 +13,7 @@ interface EditorCanvasProps {
   selectedElementId: string | null;
   onSelectElement: (id: string | null) => void;
   onAddElement: (element: EditorElement) => void;
-  onUpdateElement: (id: string, updated: Partial<EditorElement>) => void;
+  onUpdateElement: (id: string, updated: Partial<EditorElement>, commitToHistory?: boolean) => void;
   onDeleteElement: (id: string) => void;
   onDuplicateElement: (id: string) => void;
   onCanvasSizeChange: (pageIndex: number, width: number, height: number) => void;
@@ -38,6 +39,8 @@ export function EditorCanvas({
   const [isLoading, setIsLoading] = useState(true);
   const renderTaskRef = useRef<any>(null);
 
+  const baseScale = 1.25 * zoom;
+
   // Render the PDF page to background canvas
   const renderPage = useCallback(async () => {
     if (!pdfDoc) return;
@@ -56,11 +59,11 @@ export function EditorCanvas({
 
       const dpr = window.devicePixelRatio || 2;
       const unscaledViewport = page.getViewport({ scale: 1 });
-      const baseScale = 1.25 * zoom; // comfortable reading size
-      const viewport = page.getViewport({ scale: baseScale * dpr });
+      const currentScale = 1.25 * zoom;
+      const viewport = page.getViewport({ scale: currentScale * dpr });
 
-      const displayWidth = unscaledViewport.width * baseScale;
-      const displayHeight = unscaledViewport.height * baseScale;
+      const displayWidth = unscaledViewport.width * currentScale;
+      const displayHeight = unscaledViewport.height * currentScale;
 
       canvas.width = viewport.width;
       canvas.height = viewport.height;
@@ -68,7 +71,8 @@ export function EditorCanvas({
       canvas.style.height = `${displayHeight}px`;
 
       setPageSize({ width: displayWidth, height: displayHeight });
-      onCanvasSizeChange(currentPage, displayWidth, displayHeight);
+      // Notify parent of unscaled PDF points dimensions
+      onCanvasSizeChange(currentPage, unscaledViewport.width, unscaledViewport.height);
 
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
@@ -99,14 +103,12 @@ export function EditorCanvas({
     };
   }, [renderPage]);
 
-  // Handle click on canvas surface to add new elements
+  // Handle click on canvas surface to add new elements in canonical PDF points
   const handleCanvasClick = (e: MouseEvent<HTMLDivElement>) => {
-    // If clicking directly on an element, its own handler catches it
     if (e.target !== containerRef.current && e.target !== canvasRef.current) {
       return;
     }
 
-    // Deselect if in select mode
     if (activeTool === 'select') {
       onSelectElement(null);
       return;
@@ -115,8 +117,9 @@ export function EditorCanvas({
     const container = containerRef.current;
     if (!container) return;
     const rect = container.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
+    // Convert click display pixels directly into canonical PDF points
+    const clickX = (e.clientX - rect.left) / baseScale;
+    const clickY = (e.clientY - rect.top) / baseScale;
 
     if (activeTool === 'text') {
       const newElem: TextElement = {
@@ -165,11 +168,11 @@ export function EditorCanvas({
         type: 'stamp',
         stampType: 'check',
         pageIndex: currentPage,
-        x: clickX - 12,
-        y: clickY - 12,
+        x: Math.max(0, clickX - 12),
+        y: Math.max(0, clickY - 12),
         width: 24,
         height: 24,
-        color: '#16a34a', // Emerald Green
+        color: '#16a34a',
         fontSize: 20,
       };
       onAddElement(newElem);
@@ -180,11 +183,11 @@ export function EditorCanvas({
         type: 'stamp',
         stampType: 'cross',
         pageIndex: currentPage,
-        x: clickX - 12,
-        y: clickY - 12,
+        x: Math.max(0, clickX - 12),
+        y: Math.max(0, clickY - 12),
         width: 24,
         height: 24,
-        color: '#dc2626', // Crimson Red
+        color: '#dc2626',
         fontSize: 20,
       };
       onAddElement(newElem);
@@ -217,7 +220,7 @@ export function EditorCanvas({
           </div>
         )}
 
-        {/* Interactive Annotation Layer */}
+        {/* Interactive Annotation Layer scaled to baseScale */}
         {!isLoading &&
           pageElements.map((elem) => {
             if (elem.type === 'text') {
@@ -226,9 +229,9 @@ export function EditorCanvas({
                   key={elem.id}
                   element={elem as TextElement}
                   isSelected={selectedElementId === elem.id}
-                  scale={1}
+                  scale={baseScale}
                   onSelect={() => onSelectElement(elem.id)}
-                  onChange={(upd) => onUpdateElement(elem.id, upd)}
+                  onChange={(upd, commit) => onUpdateElement(elem.id, upd, commit)}
                   onDelete={() => onDeleteElement(elem.id)}
                   onDuplicate={() => onDuplicateElement(elem.id)}
                 />
@@ -241,9 +244,9 @@ export function EditorCanvas({
                   key={elem.id}
                   element={elem as ImageElement}
                   isSelected={selectedElementId === elem.id}
-                  scale={1}
+                  scale={baseScale}
                   onSelect={() => onSelectElement(elem.id)}
-                  onChange={(upd) => onUpdateElement(elem.id, upd)}
+                  onChange={(upd, commit) => onUpdateElement(elem.id, upd, commit)}
                   onDelete={() => onDeleteElement(elem.id)}
                   onDuplicate={() => onDuplicateElement(elem.id)}
                 />
@@ -251,30 +254,17 @@ export function EditorCanvas({
             }
 
             if (elem.type === 'stamp') {
-              const stamp = elem as StampElement;
-              const isSelected = selectedElementId === elem.id;
-              const symbol = stamp.stampType === 'check' ? '✓' : '✕';
               return (
-                <div
+                <StampElementOverlay
                   key={elem.id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelectElement(elem.id);
-                  }}
-                  className={`absolute flex items-center justify-center font-bold select-none cursor-move ${
-                    isSelected ? 'ring-2 ring-indigo-500 rounded bg-indigo-50/15' : 'hover:ring-1 hover:ring-indigo-300'
-                  }`}
-                  style={{
-                    left: `${elem.x}px`,
-                    top: `${elem.y}px`,
-                    width: `${elem.width}px`,
-                    height: `${elem.height}px`,
-                    fontSize: `${stamp.fontSize}px`,
-                    color: stamp.color,
-                  }}
-                >
-                  {symbol}
-                </div>
+                  element={elem as StampElement}
+                  isSelected={selectedElementId === elem.id}
+                  scale={baseScale}
+                  onSelect={() => onSelectElement(elem.id)}
+                  onChange={(upd, commit) => onUpdateElement(elem.id, upd, commit)}
+                  onDelete={() => onDeleteElement(elem.id)}
+                  onDuplicate={() => onDuplicateElement(elem.id)}
+                />
               );
             }
 

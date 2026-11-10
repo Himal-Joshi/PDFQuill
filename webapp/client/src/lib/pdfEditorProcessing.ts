@@ -15,7 +15,7 @@ function base64ToUint8Array(dataUrl: string): Uint8Array {
 export async function exportEditedPdf(
   originalPdfBytes: Uint8Array,
   elements: EditorElement[],
-  pageCanvasSizes: Map<number, { width: number; height: number }>
+  pageCanvasSizes?: Map<number, { width: number; height: number }>
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.load(originalPdfBytes);
   const pages = pdfDoc.getPages();
@@ -38,7 +38,7 @@ export async function exportEditedPdf(
     if (element.pageIndex < 0 || element.pageIndex >= pages.length) continue;
     const page = pages[element.pageIndex];
     const { width: pdfWidth, height: pdfHeight } = page.getSize();
-    const canvasSize = pageCanvasSizes.get(element.pageIndex) || { width: pdfWidth, height: pdfHeight };
+    const canvasSize = pageCanvasSizes?.get(element.pageIndex) || { width: pdfWidth, height: pdfHeight };
 
     const coords = canvasToPdfCoords(element, canvasSize, { width: pdfWidth, height: pdfHeight });
 
@@ -65,7 +65,7 @@ export async function exportEditedPdf(
         if (!line.trim()) continue;
         const lineY = coords.y + coords.height - ((i + 1) * lineHeight) + (lineHeight * 0.2);
         page.drawText(line, {
-          x: coords.x,
+          x: coords.x + 4, // 4px padding offset matching textarea p-1
           y: Math.max(0, lineY),
           size: fontSize,
           font,

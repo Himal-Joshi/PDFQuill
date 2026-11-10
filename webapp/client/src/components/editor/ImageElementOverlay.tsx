@@ -7,7 +7,7 @@ interface ImageElementOverlayProps {
   isSelected: boolean;
   scale: number;
   onSelect: () => void;
-  onChange: (updated: Partial<ImageElement>) => void;
+  onChange: (updated: Partial<ImageElement>, commitToHistory?: boolean) => void;
   onDelete: () => void;
   onDuplicate: () => void;
 }
@@ -38,18 +38,23 @@ export function ImageElementOverlay({
       elemY: element.y,
     };
 
+    let latestX = element.x;
+    let latestY = element.y;
+
     const handlePointerMove = (moveEvent: globalThis.PointerEvent) => {
       if (!isDraggingRef.current) return;
       const dx = (moveEvent.clientX - dragStartRef.current.x) / scale;
       const dy = (moveEvent.clientY - dragStartRef.current.y) / scale;
-      onChange({
-        x: Math.max(0, dragStartRef.current.elemX + dx),
-        y: Math.max(0, dragStartRef.current.elemY + dy),
-      });
+      latestX = Math.max(0, dragStartRef.current.elemX + dx);
+      latestY = Math.max(0, dragStartRef.current.elemY + dy);
+      onChange({ x: latestX, y: latestY }, false);
     };
 
     const handlePointerUp = () => {
-      isDraggingRef.current = false;
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false;
+        onChange({ x: latestX, y: latestY }, true);
+      }
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
     };
@@ -68,21 +73,25 @@ export function ImageElementOverlay({
       elemH: element.height,
     };
 
+    let latestW = element.width;
+    let latestH = element.height;
+
     const handlePointerMove = (moveEvent: globalThis.PointerEvent) => {
       if (!isResizingRef.current) return;
       const dx = (moveEvent.clientX - resizeStartRef.current.x) / scale;
-      // Proportional aspect ratio scaling
       const newWidth = Math.max(40, resizeStartRef.current.elemW + dx);
       const newHeight = newWidth / (element.aspectRatio || 1);
+      latestW = Math.round(newWidth);
+      latestH = Math.round(newHeight);
 
-      onChange({
-        width: Math.round(newWidth),
-        height: Math.round(newHeight),
-      });
+      onChange({ width: latestW, height: latestH }, false);
     };
 
     const handlePointerUp = () => {
-      isResizingRef.current = false;
+      if (isResizingRef.current) {
+        isResizingRef.current = false;
+        onChange({ width: latestW, height: latestH }, true);
+      }
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
     };

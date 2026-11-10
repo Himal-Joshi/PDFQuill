@@ -53,8 +53,12 @@ export function PdfEditor({ file, onBack }: PdfEditorProps) {
         if (!isCancelled) {
           setThumbnails(thumbs);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to load PDF in editor:', err);
+        if (err?.name === 'PasswordException') {
+          alert('This PDF is password-protected. Please use the Unlock PDF tool to remove the password first.');
+          onBack();
+        }
       }
     }
 
@@ -62,7 +66,7 @@ export function PdfEditor({ file, onBack }: PdfEditorProps) {
     return () => {
       isCancelled = true;
     };
-  }, [file]);
+  }, [file, onBack]);
 
   // History Helper: push a new snapshot
   const commitElementsChange = useCallback((newElements: EditorElement[]) => {
@@ -144,9 +148,13 @@ export function PdfEditor({ file, onBack }: PdfEditorProps) {
     commitElementsChange([...elements, element]);
   };
 
-  const handleUpdateElement = (id: string, updated: Partial<EditorElement>) => {
+  const handleUpdateElement = (id: string, updated: Partial<EditorElement>, commitToHistory = true) => {
     const newElements = elements.map((el) => (el.id === id ? ({ ...el, ...updated } as EditorElement) : el));
-    commitElementsChange(newElements);
+    if (commitToHistory) {
+      commitElementsChange(newElements);
+    } else {
+      setElements(newElements);
+    }
   };
 
   const handleDeleteElement = (id: string) => {
@@ -171,10 +179,10 @@ export function PdfEditor({ file, onBack }: PdfEditorProps) {
     setSelectedElementId(duplicated.id);
   };
 
-  // Add signature from modal
+  // Add signature from modal in canonical PDF points
   const handleSaveSignature = (dataUrl: string, aspectRatio: number) => {
-    const currentCanvasSize = pageCanvasSizesRef.current.get(currentPage) || { width: 600, height: 800 };
-    const defaultWidth = Math.min(220, currentCanvasSize.width * 0.4);
+    const currentCanvasSize = pageCanvasSizesRef.current.get(currentPage) || { width: 595, height: 842 };
+    const defaultWidth = Math.min(180, currentCanvasSize.width * 0.35);
     const defaultHeight = defaultWidth / (aspectRatio || 2);
 
     const signatureElement: ImageElement = {
@@ -184,8 +192,8 @@ export function PdfEditor({ file, onBack }: PdfEditorProps) {
       dataUrl,
       aspectRatio,
       isSignature: true,
-      x: Math.max(20, (currentCanvasSize.width - defaultWidth) / 2),
-      y: Math.max(20, (currentCanvasSize.height - defaultHeight) / 2),
+      x: Math.max(20, Math.round((currentCanvasSize.width - defaultWidth) / 2)),
+      y: Math.max(20, Math.round((currentCanvasSize.height - defaultHeight) / 2)),
       width: Math.round(defaultWidth),
       height: Math.round(defaultHeight),
     };
@@ -198,6 +206,15 @@ export function PdfEditor({ file, onBack }: PdfEditorProps) {
   const handleCanvasSizeChange = useCallback((pageIndex: number, width: number, height: number) => {
     pageCanvasSizesRef.current.set(pageIndex, { width, height });
   }, []);
+
+  // Back guard for unsaved changes
+  const handleBackWithConfirm = () => {
+    if (elements.length > 0) {
+      const confirmed = window.confirm('You have unsaved edits on this document. Are you sure you want to exit without saving?');
+      if (!confirmed) return;
+    }
+    onBack();
+  };
 
   // Export and download edited PDF
   const handleExportPdf = async () => {
@@ -246,7 +263,7 @@ export function PdfEditor({ file, onBack }: PdfEditorProps) {
         onZoomReset={() => setZoom(1.0)}
         isExporting={isExporting}
         onSave={handleExportPdf}
-        onBack={onBack}
+        onBack={handleBackWithConfirm}
       />
 
       {/* Main Workspace: Left Sidebar + Center Scrollable Canvas */}
