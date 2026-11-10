@@ -244,7 +244,7 @@ export function PdfEditor({ file, onBack }: PdfEditorProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-slate-100 dark:bg-slate-950 overflow-hidden">
+    <div className="fixed inset-0 z-[60] flex flex-col bg-slate-100 dark:bg-slate-950 overflow-hidden">
       {/* Top Toolbar */}
       <EditorToolbar
         fileName={file.name}
