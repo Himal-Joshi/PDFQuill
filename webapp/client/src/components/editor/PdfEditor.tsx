@@ -275,6 +275,10 @@ export function PdfEditor({ file, onBack }: PdfEditorProps) {
           onSelectPage={(idx) => {
             setCurrentPage(idx);
             setSelectedElementId(null);
+            const pageEl = document.getElementById(`editor-page-${idx}`);
+            if (pageEl) {
+              pageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
           }}
           elements={elements}
           thumbnails={thumbnails}
@@ -287,6 +291,7 @@ export function PdfEditor({ file, onBack }: PdfEditorProps) {
           {pdfDoc && (
             <EditorCanvas
               pdfDoc={pdfDoc}
+              numPages={numPages}
               currentPage={currentPage}
               zoom={zoom}
               elements={elements}
@@ -298,6 +303,7 @@ export function PdfEditor({ file, onBack }: PdfEditorProps) {
               onDeleteElement={handleDeleteElement}
               onDuplicateElement={handleDuplicateElement}
               onCanvasSizeChange={handleCanvasSizeChange}
+              onPageVisible={(idx) => setCurrentPage(idx)}
             />
           )}
         </main>
