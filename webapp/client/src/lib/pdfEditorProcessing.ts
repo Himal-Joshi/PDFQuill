@@ -1,5 +1,5 @@
 import { PDFDocument, rgb, StandardFonts, type PDFImage } from 'pdf-lib';
-import type { EditorElement, TextElement, ImageElement, StampElement } from '../components/editor/types.ts';
+import type { EditorElement, TextElement, ImageElement, StampElement, ShapeElement, DrawingElement } from '../components/editor/types.ts';
 import { canvasToPdfCoords, hexToRgb } from './editorCoordinates.ts';
 
 function base64ToUint8Array(dataUrl: string): Uint8Array {
@@ -44,6 +44,19 @@ export async function exportEditedPdf(
 
     if (element.type === 'text') {
       const textElem = element as TextElement;
+
+      // Draw background fill if set (e.g. whiteout or yellow highlight)
+      if (textElem.backgroundColor && textElem.backgroundColor !== 'transparent') {
+        const bgRgb = hexToRgb(textElem.backgroundColor);
+        page.drawRectangle({
+          x: coords.x,
+          y: coords.y,
+          width: coords.width,
+          height: coords.height,
+          color: rgb(bgRgb.r, bgRgb.g, bgRgb.b),
+        });
+      }
+
       let font = fonts.helvetica;
       if (textElem.fontFamily === 'TimesRoman') {
         font = textElem.bold ? fonts.timesBold : fonts.timesRoman;
@@ -89,6 +102,71 @@ export async function exportEditedPdf(
         width: Math.max(1, coords.width),
         height: Math.max(1, coords.height),
       });
+    } else if (element.type === 'shape') {
+      const shapeElem = element as ShapeElement;
+      const hasFill = shapeElem.fillColor && shapeElem.fillColor !== 'transparent';
+      const hasStroke = shapeElem.strokeColor && shapeElem.strokeColor !== 'transparent' && shapeElem.strokeWidth > 0;
+
+      const fill = hasFill ? hexToRgb(shapeElem.fillColor) : null;
+      const stroke = hasStroke ? hexToRgb(shapeElem.strokeColor) : null;
+
+      if (shapeElem.shapeType === 'rectangle') {
+        page.drawRectangle({
+          x: coords.x,
+          y: coords.y,
+          width: Math.max(1, coords.width),
+          height: Math.max(1, coords.height),
+          color: fill ? rgb(fill.r, fill.g, fill.b) : undefined,
+          borderColor: stroke ? rgb(stroke.r, stroke.g, stroke.b) : undefined,
+          borderWidth: hasStroke ? shapeElem.strokeWidth : 0,
+          opacity: shapeElem.opacity ?? 1,
+        });
+      } else if (shapeElem.shapeType === 'circle') {
+        const radiusX = Math.max(1, coords.width / 2);
+        const radiusY = Math.max(1, coords.height / 2);
+        page.drawEllipse({
+          x: coords.x + radiusX,
+          y: coords.y + radiusY,
+          xScale: radiusX,
+          yScale: radiusY,
+          color: fill ? rgb(fill.r, fill.g, fill.b) : undefined,
+          borderColor: stroke ? rgb(stroke.r, stroke.g, stroke.b) : undefined,
+          borderWidth: hasStroke ? shapeElem.strokeWidth : 0,
+          opacity: shapeElem.opacity ?? 1,
+        });
+      } else if (shapeElem.shapeType === 'line') {
+        const lineCol = stroke || { r: 0, g: 0, b: 0 };
+        page.drawLine({
+          start: { x: coords.x, y: coords.y + coords.height },
+          end: { x: coords.x + coords.width, y: coords.y },
+          thickness: shapeElem.strokeWidth || 2,
+          color: rgb(lineCol.r, lineCol.g, lineCol.b),
+          opacity: shapeElem.opacity ?? 1,
+        });
+      }
+    } else if (element.type === 'drawing') {
+      const drawElem = element as DrawingElement;
+      if (drawElem.points && drawElem.points.length >= 2) {
+        const drawColor = hexToRgb(drawElem.color || '#000000');
+        const color = rgb(drawColor.r, drawColor.g, drawColor.b);
+        const opacity = drawElem.isHighlighter ? 0.35 : (drawElem.opacity ?? 1);
+        const thickness = drawElem.strokeWidth || 3;
+
+        for (let i = 0; i < drawElem.points.length - 1; i++) {
+          const pt1 = drawElem.points[i];
+          const pt2 = drawElem.points[i + 1];
+          const p1 = canvasToPdfCoords({ x: pt1.x, y: pt1.y, width: 0, height: 0 }, canvasSize, { width: pdfWidth, height: pdfHeight });
+          const p2 = canvasToPdfCoords({ x: pt2.x, y: pt2.y, width: 0, height: 0 }, canvasSize, { width: pdfWidth, height: pdfHeight });
+
+          page.drawLine({
+            start: { x: p1.x, y: p1.y },
+            end: { x: p2.x, y: p2.y },
+            thickness,
+            color,
+            opacity,
+          });
+        }
+      }
     } else if (element.type === 'stamp') {
       const stampElem = element as StampElement;
       const { r, g, b } = hexToRgb(stampElem.color);

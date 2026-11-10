@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { EditorElement, EditorToolMode } from './types.ts';
+import type { EditorElement, EditorToolMode, FontChoice, ShapeType } from './types.ts';
 import { EditorPage } from './EditorPage.tsx';
 
 interface EditorCanvasProps {
@@ -10,6 +10,23 @@ interface EditorCanvasProps {
   elements: EditorElement[];
   activeTool: EditorToolMode;
   selectedElementId: string | null;
+
+  // Active Tool Settings
+  shapeType: ShapeType;
+  shapeFill: string;
+  shapeStroke: string;
+
+  drawMode: 'pen' | 'highlighter';
+  drawColor: string;
+  drawWidth: number;
+
+  textFont: FontChoice;
+  textSize: number;
+  textColor: string;
+  textBgColor: string;
+  textBold: boolean;
+  textItalic: boolean;
+
   onSelectElement: (id: string | null) => void;
   onAddElement: (element: EditorElement) => void;
   onUpdateElement: (id: string, updated: Partial<EditorElement>, commitToHistory?: boolean) => void;
@@ -27,6 +44,22 @@ export function EditorCanvas({
   elements,
   activeTool,
   selectedElementId,
+
+  shapeType,
+  shapeFill,
+  shapeStroke,
+
+  drawMode,
+  drawColor,
+  drawWidth,
+
+  textFont,
+  textSize,
+  textColor,
+  textBgColor,
+  textBold,
+  textItalic,
+
   onSelectElement,
   onAddElement,
   onUpdateElement,
@@ -80,6 +113,18 @@ export function EditorCanvas({
             elements={elements}
             activeTool={activeTool}
             selectedElementId={selectedElementId}
+            shapeType={shapeType}
+            shapeFill={shapeFill}
+            shapeStroke={shapeStroke}
+            drawMode={drawMode}
+            drawColor={drawColor}
+            drawWidth={drawWidth}
+            textFont={textFont}
+            textSize={textSize}
+            textColor={textColor}
+            textBgColor={textBgColor}
+            textBold={textBold}
+            textItalic={textItalic}
             onSelectElement={onSelectElement}
             onAddElement={onAddElement}
             onUpdateElement={onUpdateElement}

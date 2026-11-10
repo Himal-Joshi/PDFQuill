@@ -869,48 +869,50 @@ function App() {
 
   return (
     <div className="min-h-screen selection:bg-primary/20 selection:text-primary">
-      {/* Top Navigation Bar */}
-      <nav className="fixed top-0 w-full z-50 glass">
-        <div className="flex justify-between items-center h-20 px-8 w-full">
-          <div className="flex items-center gap-3 cursor-pointer select-none group" onClick={goHome}>
-            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform duration-300">
-              <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="PDFQuill" className="w-7 h-7 object-contain" />
-            </div>
-            <span className="font-display text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-              <span className="dark:text-white">PDF</span><span className="text-primary">Quill</span>
-            </span>
-          </div>
-
-          <div className="hidden md:flex items-center gap-8">
-            <button onClick={goHome} className={cn("text-base font-semibold transition-colors duration-200", (activeTool === null && view === 'main') ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Tools</button>
-            <button onClick={() => navigate('/pricing')} className={cn("text-base font-semibold transition-colors duration-200", view === 'pricing' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Pricing</button>
-            <button onClick={() => navigate('/solutions')} className={cn("text-base font-semibold transition-colors duration-200", view === 'solutions' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Solutions</button>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <button
-              onClick={toggleTheme}
-              className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200"
-              aria-label="Toggle theme"
-            >
-              {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-            </button>
-            {user ? (
-              <div className="flex items-center gap-4">
-                <span className="text-base font-semibold text-slate-600 dark:text-slate-400 hidden sm:block">{user.email}</span>
-                <button onClick={logout} className="btn btn-ghost text-base">Logout</button>
+      {/* Top Navigation Bar (Hidden in full-screen PDF Editor) */}
+      {!(activeTool === 'edit-pdf' && files.length > 0) && (
+        <nav className="fixed top-0 w-full z-50 glass">
+          <div className="flex justify-between items-center h-20 px-8 w-full">
+            <div className="flex items-center gap-3 cursor-pointer select-none group" onClick={goHome}>
+              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform duration-300">
+                <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="PDFQuill" className="w-7 h-7 object-contain" />
               </div>
-            ) : (
-              <>
-                <button onClick={() => navigate('/login')} className="hidden sm:block btn btn-ghost text-base">Login</button>
-                <button onClick={() => navigate('/get-started')} className="btn btn-primary text-base">Get Started</button>
-              </>
-            )}
-          </div>
-        </div>
-      </nav>
+              <span className="font-display text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                <span className="dark:text-white">PDF</span><span className="text-primary">Quill</span>
+              </span>
+            </div>
 
-      <main className="pt-20 pb-20 flex-1">
+            <div className="hidden md:flex items-center gap-8">
+              <button onClick={goHome} className={cn("text-base font-semibold transition-colors duration-200", (activeTool === null && view === 'main') ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Tools</button>
+              <button onClick={() => navigate('/pricing')} className={cn("text-base font-semibold transition-colors duration-200", view === 'pricing' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Pricing</button>
+              <button onClick={() => navigate('/solutions')} className={cn("text-base font-semibold transition-colors duration-200", view === 'solutions' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Solutions</button>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <button
+                onClick={toggleTheme}
+                className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200"
+                aria-label="Toggle theme"
+              >
+                {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
+              {user ? (
+                <div className="flex items-center gap-4">
+                  <span className="text-base font-semibold text-slate-600 dark:text-slate-400 hidden sm:block">{user.email}</span>
+                  <button onClick={logout} className="btn btn-ghost text-base">Logout</button>
+                </div>
+              ) : (
+                <>
+                  <button onClick={() => navigate('/login')} className="hidden sm:block btn btn-ghost text-base">Login</button>
+                  <button onClick={() => navigate('/get-started')} className="btn btn-primary text-base">Get Started</button>
+                </>
+              )}
+            </div>
+          </div>
+        </nav>
+      )}
+
+      <main className={cn("flex-1", !(activeTool === 'edit-pdf' && files.length > 0) && "pt-20 pb-20")}>
         {view !== 'main' ? (
           <div className={cn("px-6 py-20 mx-auto", view === 'docs' ? "max-w-7xl" : "max-w-4xl")}>
             {view === 'pricing' && <PricingView user={user} />}
@@ -1854,41 +1856,43 @@ function App() {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="w-full py-12 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950 mt-auto">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-8 px-6 max-w-7xl mx-auto">
-          <div className="flex flex-col items-center md:items-start gap-2">
-            <div className="flex items-center gap-2 select-none cursor-pointer group" onClick={goHome}>
-              <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center opacity-80 group-hover:opacity-100 transition-opacity">
-                <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="" className="w-5 h-5" />
+      {/* Footer (Hidden in full-screen PDF Editor) */}
+      {!(activeTool === 'edit-pdf' && files.length > 0) && (
+        <footer className="w-full py-12 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950 mt-auto">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-8 px-6 max-w-7xl mx-auto">
+            <div className="flex flex-col items-center md:items-start gap-2">
+              <div className="flex items-center gap-2 select-none cursor-pointer group" onClick={goHome}>
+                <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center opacity-80 group-hover:opacity-100 transition-opacity">
+                  <img src={`${import.meta.env.BASE_URL}logo.svg`} alt="" className="w-5 h-5" />
+                </div>
+                <span className="font-display text-lg font-bold tracking-tight text-slate-900 dark:text-white">
+                  <span className="dark:text-white">PDF</span><span className="text-primary">Quill</span>
+                </span>
               </div>
-              <span className="font-display text-lg font-bold tracking-tight text-slate-900 dark:text-white">
-                <span className="dark:text-white">PDF</span><span className="text-primary">Quill</span>
-              </span>
+              <p className="text-xs font-medium text-slate-500">© {new Date().getFullYear()} PDFQuill Toolkit. Built for security & speed.</p>
             </div>
-            <p className="text-xs font-medium text-slate-500">© {new Date().getFullYear()} PDFQuill Toolkit. Built for security & speed.</p>
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4">
-            <button onClick={() => navigate('/privacy')} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Privacy</button>
-            <button onClick={() => navigate('/terms')} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Terms</button>
-            <a className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest" href="https://github.com/Himal-Joshi/PDFQuill" target="_blank" rel="noopener noreferrer">Github</a>
-            <a className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest" href="https://github.com/Himal-Joshi/PDFQuill" target="_blank" rel="noopener noreferrer">Contact</a>
+            <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4">
+              <button onClick={() => navigate('/privacy')} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Privacy</button>
+              <button onClick={() => navigate('/terms')} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Terms</button>
+              <a className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest" href="https://github.com/Himal-Joshi/PDFQuill" target="_blank" rel="noopener noreferrer">Github</a>
+              <a className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest" href="https://github.com/Himal-Joshi/PDFQuill" target="_blank" rel="noopener noreferrer">Contact</a>
 
-            <a
-              href="https://buymemomo.com/Himal_Joshi"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-1.5 bg-white rounded-lg px-2.5 py-1.5 shadow-sm hover:shadow hover:-translate-y-0.5 transition-all"
-            >
-              <img src="https://buymemomo.com/logo.png" alt="" className="h-6 object-contain" />
-              <span className="flex items-baseline">
-                <span className="font-bold text-black text-sm tracking-tight leading-none">BuyMe</span>
-                <span className="font-bold text-[#f45d48] text-[15px] leading-none tracking-tight ml-[1px]" style={{ fontFamily: '"Brush Script MT", "Lucida Handwriting", cursive' }}>Momo</span>
-              </span>
-            </a>
+              <a
+                href="https://buymemomo.com/Himal_Joshi"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1.5 bg-white rounded-lg px-2.5 py-1.5 shadow-sm hover:shadow hover:-translate-y-0.5 transition-all"
+              >
+                <img src="https://buymemomo.com/logo.png" alt="" className="h-6 object-contain" />
+                <span className="flex items-baseline">
+                  <span className="font-bold text-black text-sm tracking-tight leading-none">BuyMe</span>
+                  <span className="font-bold text-[#f45d48] text-[15px] leading-none tracking-tight ml-[1px]" style={{ fontFamily: '"Brush Script MT", "Lucida Handwriting", cursive' }}>Momo</span>
+                </span>
+              </a>
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 }
