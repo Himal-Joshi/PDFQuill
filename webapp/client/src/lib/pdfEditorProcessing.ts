@@ -92,15 +92,38 @@ export async function exportEditedPdf(
     } else if (element.type === 'stamp') {
       const stampElem = element as StampElement;
       const { r, g, b } = hexToRgb(stampElem.color);
-      const symbolText = stampElem.stampType === 'check' ? '✓' : (stampElem.stampType === 'cross' ? '✕' : stampElem.textValue || '');
-      
-      page.drawText(symbolText, {
-        x: coords.x,
-        y: coords.y,
-        size: stampElem.fontSize || 18,
-        font: fonts.helveticaBold,
-        color: rgb(r, g, b),
-      });
+      const color = rgb(r, g, b);
+
+      if (stampElem.stampType === 'check') {
+        const thickness = Math.max(2, (stampElem.fontSize || 18) * 0.12);
+        const p1 = { x: coords.x + coords.width * 0.1, y: coords.y + coords.height * 0.45 };
+        const p2 = { x: coords.x + coords.width * 0.38, y: coords.y + coords.height * 0.15 };
+        const p3 = { x: coords.x + coords.width * 0.9, y: coords.y + coords.height * 0.85 };
+        page.drawLine({ start: p1, end: p2, thickness, color });
+        page.drawLine({ start: p2, end: p3, thickness, color });
+      } else if (stampElem.stampType === 'cross') {
+        const thickness = Math.max(2, (stampElem.fontSize || 18) * 0.12);
+        page.drawLine({
+          start: { x: coords.x + coords.width * 0.15, y: coords.y + coords.height * 0.15 },
+          end: { x: coords.x + coords.width * 0.85, y: coords.y + coords.height * 0.85 },
+          thickness,
+          color,
+        });
+        page.drawLine({
+          start: { x: coords.x + coords.width * 0.15, y: coords.y + coords.height * 0.85 },
+          end: { x: coords.x + coords.width * 0.85, y: coords.y + coords.height * 0.15 },
+          thickness,
+          color,
+        });
+      } else if (stampElem.textValue) {
+        page.drawText(stampElem.textValue, {
+          x: coords.x,
+          y: coords.y,
+          size: stampElem.fontSize || 14,
+          font: fonts.helveticaBold,
+          color,
+        });
+      }
     }
   }
 

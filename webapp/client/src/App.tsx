@@ -35,6 +35,7 @@ import {
   Unlock,
   PlayCircle,
   X,
+  PenLine,
   type LucideIcon,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -49,6 +50,7 @@ import { pdfToMarkdown, type MarkdownResult } from './lib/pdfToMdProcessing';
 import { auth, googleProvider } from './lib/firebase';
 import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import { isNative } from './lib/platform';
+import { PdfEditor } from './components/editor/PdfEditor';
 
 import { generateThumbnails, getPageImage, type PageThumbnail } from './lib/pdfThumbnails';
 
@@ -58,7 +60,7 @@ function cn(...inputs: ClassValue[]) {
 
 // const API_BASE = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? '/PDFQuill' : '/PDFQuill');
 
-type Tool = 'merge' | 'split' | 'compress' | 'rotate' | 'watermark' | 'page-numbers' | 'organize' | 'convert' | 'pdf-to-image' | 'compress-image' | 'remove-bg' | 'ocr' | 'ocr-extract' | 'html-to-pdf' | 'flatten-pdf' | 'protect-pdf' | 'unlock-pdf' | 'svg-to-png' | 'pdf-to-markdown' | 'jpg-to-png' | 'png-to-jpg' | 'image-to-webp' | 'webp-to-jpg';
+type Tool = 'edit-pdf' | 'merge' | 'split' | 'compress' | 'rotate' | 'watermark' | 'page-numbers' | 'organize' | 'convert' | 'pdf-to-image' | 'compress-image' | 'remove-bg' | 'ocr' | 'ocr-extract' | 'html-to-pdf' | 'flatten-pdf' | 'protect-pdf' | 'unlock-pdf' | 'svg-to-png' | 'pdf-to-markdown' | 'jpg-to-png' | 'png-to-jpg' | 'image-to-webp' | 'webp-to-jpg';
 
 type ToolConfig = {
   id: Tool;
@@ -73,6 +75,14 @@ type ToolConfig = {
 };
 
 const tools: ToolConfig[] = [
+  {
+    id: 'edit-pdf',
+    label: 'Edit PDF',
+    description: 'Add text annotations, fill form fields, and draw or upload signatures directly on your document.',
+    endpoint: '',
+    icon: 'edit_document',
+    lucideIcon: PenLine,
+  },
   {
     id: 'compress',
     label: 'Compress PDF',
@@ -551,7 +561,7 @@ function App() {
 
   // Generate thumbnails when files change (for single-file PDF tools)
   useEffect(() => {
-    if (files.length === 0 || activeTool === 'convert' || activeTool === 'compress-image' || activeTool === 'remove-bg' || activeTool === 'svg-to-png' || activeTool === 'jpg-to-png' || activeTool === 'png-to-jpg' || activeTool === 'image-to-webp' || activeTool === 'webp-to-jpg') {
+    if (files.length === 0 || activeTool === 'edit-pdf' || activeTool === 'convert' || activeTool === 'compress-image' || activeTool === 'remove-bg' || activeTool === 'svg-to-png' || activeTool === 'jpg-to-png' || activeTool === 'png-to-jpg' || activeTool === 'image-to-webp' || activeTool === 'webp-to-jpg') {
       Promise.resolve().then(() => setThumbnails([]));
       return;
     }
@@ -1081,6 +1091,14 @@ function App() {
               </div>
             </section>
           </div>
+        ) : activeTool === 'edit-pdf' && files.length > 0 ? (
+          <PdfEditor
+            file={files[0]}
+            onBack={() => {
+              setFiles([]);
+              setThumbnails([]);
+            }}
+          />
         ) : (
           // Workspace View
           <div className="px-6 py-12">
