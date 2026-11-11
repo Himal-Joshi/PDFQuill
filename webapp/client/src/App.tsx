@@ -36,6 +36,11 @@ import {
   PlayCircle,
   X,
   PenLine,
+  Monitor,
+  HardDrive,
+  ShieldCheck,
+  Zap,
+  ExternalLink,
   type LucideIcon,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -289,7 +294,7 @@ const tools: ToolConfig[] = [
   },
 ];
 
-type ViewType = 'main' | 'pricing' | 'solutions' | 'privacy' | 'terms' | 'login' | 'docs' | 'get-started';
+type ViewType = 'main' | 'pricing' | 'solutions' | 'privacy' | 'terms' | 'login' | 'docs' | 'get-started' | 'download';
 
 const getInitialState = () => {
   if (typeof window === 'undefined') return { view: 'main' as ViewType, tool: null as Tool | null };
@@ -884,6 +889,10 @@ function App() {
 
             <div className="hidden md:flex items-center gap-8">
               <button onClick={goHome} className={cn("text-base font-semibold transition-colors duration-200", (activeTool === null && view === 'main') ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Tools</button>
+              <button onClick={() => navigate('/download')} className={cn("text-base font-semibold transition-colors duration-200 flex items-center gap-1.5", view === 'download' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>
+                <Download size={16} />
+                Download
+              </button>
               <button onClick={() => navigate('/pricing')} className={cn("text-base font-semibold transition-colors duration-200", view === 'pricing' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Pricing</button>
               <button onClick={() => navigate('/solutions')} className={cn("text-base font-semibold transition-colors duration-200", view === 'solutions' ? "text-primary" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100")}>Solutions</button>
             </div>
@@ -914,9 +923,10 @@ function App() {
 
       <main className={cn("flex-1", !(activeTool === 'edit-pdf' && files.length > 0) && "pt-20 pb-20")}>
         {view !== 'main' ? (
-          <div className={cn("px-6 py-20 mx-auto", view === 'docs' ? "max-w-7xl" : "max-w-4xl")}>
+          <div className={cn("px-6 py-20 mx-auto", (view === 'docs' || view === 'download') ? "max-w-7xl" : "max-w-4xl")}>
             {view === 'pricing' && <PricingView user={user} />}
             {view === 'solutions' && <SolutionsView />}
+            {view === 'download' && <DownloadView />}
             {view === 'privacy' && <PrivacyView />}
             {view === 'terms' && <TermsView />}
             {view === 'login' && <LoginView onLogin={(u) => { setUser(u); navigate('/'); localStorage.setItem('user', JSON.stringify(u)); }} />}
@@ -945,13 +955,22 @@ function App() {
                     Merge, split, compress, and convert your documents with a premium toolkit designed for modern workflows. Fast, private, and 100% free.
                   </p>
 
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-5">
                     <button onClick={() => document.getElementById('tools-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="btn btn-primary px-8 py-4 text-base w-full sm:w-auto">
                       Explore All Tools
                     </button>
-                    <button onClick={() => navigate('/docs')} className="btn btn-secondary px-8 py-4 text-base w-full sm:w-auto">
-                      View Documentation
+                    <button onClick={() => navigate('/download')} className="btn btn-secondary px-8 py-4 text-base w-full sm:w-auto flex items-center justify-center gap-2">
+                      <Download size={18} className="text-primary" />
+                      Download Desktop App
                     </button>
+                    <button onClick={() => navigate('/docs')} className="btn btn-ghost px-6 py-4 text-base w-full sm:w-auto">
+                      Documentation
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400 mb-10">
+                    <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Desktop App available for <strong>Windows</strong>, <strong>macOS</strong> & <strong>Linux</strong> — 100% offline & private</span>
                   </div>
 
                   <div
@@ -1872,6 +1891,9 @@ function App() {
               <p className="text-xs font-medium text-slate-500">© {new Date().getFullYear()} PDFQuill Toolkit. Built for security & speed.</p>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4">
+              <button onClick={() => navigate('/download')} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest flex items-center gap-1">
+                <Download size={13} /> Download App
+              </button>
               <button onClick={() => navigate('/privacy')} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Privacy</button>
               <button onClick={() => navigate('/terms')} className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest">Terms</button>
               <a className="text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest" href="https://github.com/Himal-Joshi/PDFQuill" target="_blank" rel="noopener noreferrer">Github</a>
@@ -2587,6 +2609,274 @@ function SolutionsView() {
             <p className="text-lg text-slate-600 dark:text-slate-400">{s.desc}</p>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function DownloadView() {
+  const [detectedOs, setDetectedOs] = useState<'windows' | 'mac' | 'linux'>('windows');
+
+  useEffect(() => {
+    if (typeof navigator !== 'undefined') {
+      const ua = navigator.userAgent.toLowerCase();
+      if (ua.includes('mac') || ua.includes('darwin')) {
+        setDetectedOs('mac');
+      } else if (ua.includes('linux')) {
+        setDetectedOs('linux');
+      } else {
+        setDetectedOs('windows');
+      }
+    }
+  }, []);
+
+  const platforms = [
+    {
+      id: 'windows',
+      name: 'Windows',
+      tagline: 'Windows 10 / 11 (64-bit)',
+      badge: detectedOs === 'windows' ? 'Your Operating System' : null,
+      icon: (
+        <svg className="w-10 h-10 fill-current text-sky-500" viewBox="0 0 24 24">
+          <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.951-1.951"/>
+        </svg>
+      ),
+      description: 'Native Windows desktop build with hardware-accelerated rendering and background workers.',
+      downloads: [
+        {
+          label: 'Download Setup (.exe)',
+          sublabel: 'Recommended for Windows 10 & 11',
+          url: 'https://github.com/Himal-Joshi/PDFQuill/releases/latest',
+          primary: true,
+          badge: 'Recommended'
+        },
+        {
+          label: 'Download Package (.msi)',
+          sublabel: 'Windows Installer for enterprise / IT',
+          url: 'https://github.com/Himal-Joshi/PDFQuill/releases/latest',
+          primary: false,
+          badge: 'Enterprise'
+        }
+      ]
+    },
+    {
+      id: 'mac',
+      name: 'macOS',
+      tagline: 'macOS 11.0 (Big Sur) or higher',
+      badge: detectedOs === 'mac' ? 'Your Operating System' : null,
+      icon: (
+        <svg className="w-10 h-10 fill-current text-slate-900 dark:text-white" viewBox="0 0 24 24">
+          <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.62-.75 1.04-1.8 1.01-2.87-.96.04-2.13.64-2.82 1.44-.55.63-.99 1.67-.92 2.69 1.08.08 2.12-.55 2.73-1.26z"/>
+        </svg>
+      ),
+      description: 'Universal binary optimized for Apple Silicon (M1/M2/M3/M4) and Intel Macs.',
+      downloads: [
+        {
+          label: 'Apple Silicon (.dmg)',
+          sublabel: 'Optimized for M1, M2, M3, M4 Macs',
+          url: 'https://github.com/Himal-Joshi/PDFQuill/releases/latest',
+          primary: true,
+          badge: 'M1/M2/M3/M4'
+        },
+        {
+          label: 'Intel Mac (.dmg)',
+          sublabel: 'For Intel-based Mac computers',
+          url: 'https://github.com/Himal-Joshi/PDFQuill/releases/latest',
+          primary: false,
+          badge: 'Intel x64'
+        }
+      ]
+    },
+    {
+      id: 'linux',
+      name: 'Linux',
+      tagline: 'Universal (Ubuntu, Debian, Fedora, Arch)',
+      badge: detectedOs === 'linux' ? 'Your Operating System' : null,
+      icon: (
+        <svg className="w-10 h-10 fill-current text-amber-500" viewBox="0 0 24 24">
+          <path d="M12.001 0C5.373 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.6.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0112 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 12c0-6.627-5.373-12-12-12z"/>
+        </svg>
+      ),
+      description: 'Portable universal standalone AppImage and native Debian/Ubuntu packages.',
+      downloads: [
+        {
+          label: 'AppImage (.AppImage)',
+          sublabel: 'Universal single-file binary, runs on any distro',
+          url: 'https://github.com/Himal-Joshi/PDFQuill/releases/latest',
+          primary: true,
+          badge: 'Universal'
+        },
+        {
+          label: 'Debian / Ubuntu (.deb)',
+          sublabel: 'Native package for Debian, Ubuntu, Mint',
+          url: 'https://github.com/Himal-Joshi/PDFQuill/releases/latest',
+          primary: false,
+          badge: 'Debian/Ubuntu'
+        }
+      ]
+    }
+  ];
+
+  const features = [
+    {
+      icon: <HardDrive className="w-6 h-6 text-primary" />,
+      title: '100% Offline Capability',
+      desc: 'All core PDF utilities, compression, encryption, signatures, and OCR execute locally on your machine without an internet connection.'
+    },
+    {
+      icon: <ShieldCheck className="w-6 h-6 text-emerald-500" />,
+      title: 'Maximum Privacy & Security',
+      desc: 'Zero data leaves your device. Documents never traverse external servers or cloud endpoints, keeping your files confidential.'
+    },
+    {
+      icon: <Zap className="w-6 h-6 text-amber-500" />,
+      title: 'No File Size Limits',
+      desc: 'Forget 50MB web limits. Process multi-gigabyte files and hundreds of pages smoothly with native Rust and system memory.'
+    },
+    {
+      icon: <Monitor className="w-6 h-6 text-indigo-500" />,
+      title: 'Native OS Integration',
+      desc: 'Built with Tauri v2 for microscopic memory footprint (<50MB RAM), native file dialogs, and instant startup speed.'
+    }
+  ];
+
+  return (
+    <div className="py-4">
+      {/* Header */}
+      <div className="text-center max-w-3xl mx-auto mb-16">
+        <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-1.5 rounded-full font-bold text-xs uppercase tracking-wider mb-6">
+          <Monitor size={14} />
+          Cross-Platform Desktop Application
+        </div>
+        <h2 className="text-4xl md:text-5xl font-display font-extrabold text-slate-900 dark:text-white mb-6 tracking-tight">
+          Download PDFQuill for Desktop
+        </h2>
+        <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed">
+          The full power of PDFQuill as a native, lightning-fast desktop application.
+          Run completely offline with zero upload limits on Windows, macOS, and Linux.
+        </p>
+      </div>
+
+      {/* OS Cards */}
+      <div className="grid md:grid-cols-3 gap-8 mb-20">
+        {platforms.map((p) => {
+          const isSelected = detectedOs === p.id;
+          return (
+            <div
+              key={p.id}
+              className={cn(
+                "card p-8 flex flex-col justify-between relative transition-all duration-300",
+                isSelected
+                  ? "ring-2 ring-primary shadow-xl shadow-primary/10 bg-white dark:bg-slate-900 scale-102"
+                  : "bg-white/60 dark:bg-slate-900/60 hover:shadow-lg"
+              )}
+            >
+              {p.badge && (
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-primary text-white text-[11px] font-extrabold uppercase tracking-wider px-3.5 py-1 rounded-full shadow-md">
+                  {p.badge}
+                </div>
+              )}
+
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-2xl">
+                    {p.icon}
+                  </div>
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg">
+                    {p.tagline}
+                  </span>
+                </div>
+
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">{p.name}</h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
+                  {p.description}
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {p.downloads.map((d) => (
+                  <a
+                    key={d.label}
+                    href={d.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      "group flex flex-col p-3.5 rounded-xl border transition-all text-left w-full",
+                      d.primary
+                        ? "bg-primary text-white border-primary hover:bg-primary/95 shadow-md shadow-primary/20"
+                        : "bg-slate-50 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white hover:border-primary/50"
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-sm flex items-center gap-1.5">
+                        <Download size={15} />
+                        {d.label}
+                      </span>
+                      <span
+                        className={cn(
+                          "text-[10px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider",
+                          d.primary ? "bg-white/20 text-white" : "bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300"
+                        )}
+                      >
+                        {d.badge}
+                      </span>
+                    </div>
+                    <span className={cn("text-xs mt-1", d.primary ? "text-white/80" : "text-slate-500 dark:text-slate-400")}>
+                      {d.sublabel}
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* GitHub Releases Banner */}
+      <div className="card p-8 mb-20 bg-gradient-to-br from-slate-900 to-slate-950 text-white border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xl">
+        <div className="text-left">
+          <h4 className="text-xl font-bold mb-1 flex items-center gap-2">
+            <Globe className="text-primary" size={20} />
+            Looking for older builds, checksums, or source code?
+          </h4>
+          <p className="text-sm text-slate-400">
+            All releases are 100% open source under the MIT License. View SHA-256 hashes, release notes, and install instructions on GitHub.
+          </p>
+        </div>
+        <a
+          href="https://github.com/Himal-Joshi/PDFQuill/releases"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn-secondary bg-white text-slate-900 hover:bg-slate-100 shrink-0 flex items-center gap-2 font-bold px-6 py-3"
+        >
+          View All Releases <ExternalLink size={16} />
+        </a>
+      </div>
+
+      {/* Desktop Advantages */}
+      <div className="mb-12">
+        <div className="text-center mb-12">
+          <h3 className="text-3xl font-display font-extrabold text-slate-900 dark:text-white mb-3">
+            Why choose PDFQuill Desktop?
+          </h3>
+          <p className="text-slate-600 dark:text-slate-400 text-base max-w-xl mx-auto">
+            Engineered with Tauri v2 and Rust for maximum speed, security, and resource efficiency.
+          </p>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {features.map((f) => (
+            <div key={f.title} className="card p-6 bg-white dark:bg-slate-900 flex flex-col">
+              <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl w-fit mb-4">
+                {f.icon}
+              </div>
+              <h5 className="font-bold text-base text-slate-900 dark:text-white mb-2">{f.title}</h5>
+              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed flex-1">
+                {f.desc}
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

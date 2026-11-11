@@ -1,0 +1,81 @@
+name: 'Release Desktop App'
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'windows-latest'
+            args: ''
+          - platform: 'macos-latest'
+            args: '--target universal-apple-darwin'
+          - platform: 'ubuntu-22.04'
+            args: ''
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: 'webapp/client/package-lock.json'
+
+      - name: Setup Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Install dependencies (Ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev libayatana-appindicator3-dev
+
+      - name: Install web client dependencies
+        run: |
+          cd webapp/client
+          npm ci
+
+      - name: Download offline assets
+        run: |
+          cd webapp/client
+          npm run setup-assets
+
+      - name: Build web assets
+        run: |
+          cd webapp/client
+          npm run build
+
+      - name: Build and bundle Tauri desktop app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: 'webapp/client'
+          tagName: ${{ github.ref_name }}
+          releaseName: 'PDFQuill v__VERSION__'
+          releaseBody: |
+            ## PDFQuill Desktop Release
+            
+            100% private, client-side, and offline PDF editor and toolkit.
+            
+            ### Included Assets:
+            - **Windows**: `.exe` (NSIS setup installer) and `.msi` (Windows Installer)
+            - **macOS**: Universal `.dmg` (Apple Silicon M1/M2/M3/M4 & Intel x64)
+            - **Linux**: `.AppImage` (Universal standalone) and `.deb` (Debian/Ubuntu)
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
