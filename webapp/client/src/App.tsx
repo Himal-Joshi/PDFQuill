@@ -955,22 +955,13 @@ function App() {
                     Merge, split, compress, and convert your documents with a premium toolkit designed for modern workflows. Fast, private, and 100% free.
                   </p>
 
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-5">
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
                     <button onClick={() => document.getElementById('tools-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} className="btn btn-primary px-8 py-4 text-base w-full sm:w-auto">
                       Explore All Tools
                     </button>
-                    <button onClick={() => navigate('/download')} className="btn btn-secondary px-8 py-4 text-base w-full sm:w-auto flex items-center justify-center gap-2">
-                      <Download size={18} className="text-primary" />
-                      Download Desktop App
+                    <button onClick={() => navigate('/docs')} className="btn btn-secondary px-8 py-4 text-base w-full sm:w-auto">
+                      View Documentation
                     </button>
-                    <button onClick={() => navigate('/docs')} className="btn btn-ghost px-6 py-4 text-base w-full sm:w-auto">
-                      Documentation
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400 mb-10">
-                    <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span>Desktop App available for <strong>Windows</strong>, <strong>macOS</strong> & <strong>Linux</strong> — 100% offline & private</span>
                   </div>
 
                   <div
@@ -2617,6 +2608,21 @@ function SolutionsView() {
 function DownloadView() {
   const [detectedOs, setDetectedOs] = useState<'windows' | 'mac' | 'linux'>('windows');
 
+  const handleDirectDownload = (url: string) => {
+    // Initiate direct download via hidden iframe without navigating the page or redirecting
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = url;
+    document.body.appendChild(iframe);
+    setTimeout(() => {
+      try {
+        document.body.removeChild(iframe);
+      } catch {
+        // ignore
+      }
+    }, 15000);
+  };
+
   useEffect(() => {
     if (typeof navigator !== 'undefined') {
       const ua = navigator.userAgent.toLowerCase();
@@ -2765,6 +2771,10 @@ function DownloadView() {
               <a
                 href={primaryDownload.url}
                 download
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleDirectDownload(primaryDownload.url);
+                }}
                 className="btn btn-primary px-8 py-4 text-base flex items-center justify-center gap-3 shadow-xl shadow-primary/25 hover:shadow-primary/40 transition-all font-bold"
               >
                 <Download size={20} />
@@ -2820,6 +2830,10 @@ function DownloadView() {
                     key={d.label}
                     href={d.url}
                     download
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleDirectDownload(d.url);
+                    }}
                     className={cn(
                       "group flex flex-col p-3.5 rounded-xl border transition-all text-left w-full",
                       d.primary
