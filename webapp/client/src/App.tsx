@@ -2646,14 +2646,14 @@ function DownloadView() {
         {
           label: 'Download Setup (.exe)',
           sublabel: 'Recommended for Windows 10 & 11',
-          url: 'https://github.com/Himal-Joshi/PDFQuill/releases/latest',
+          url: 'https://github.com/Himal-Joshi/PDFQuill/releases/download/v0.1.0/PDFQuill_0.1.0_x64-setup.exe',
           primary: true,
           badge: 'Recommended'
         },
         {
           label: 'Download Package (.msi)',
           sublabel: 'Windows Installer for enterprise / IT',
-          url: 'https://github.com/Himal-Joshi/PDFQuill/releases/latest',
+          url: 'https://github.com/Himal-Joshi/PDFQuill/releases/download/v0.1.0/PDFQuill_0.1.0_x64_en-US.msi',
           primary: false,
           badge: 'Enterprise'
         }
@@ -2674,14 +2674,14 @@ function DownloadView() {
         {
           label: 'Apple Silicon (.dmg)',
           sublabel: 'Optimized for M1, M2, M3, M4 Macs',
-          url: 'https://github.com/Himal-Joshi/PDFQuill/releases/latest',
+          url: 'https://github.com/Himal-Joshi/PDFQuill/releases/download/v0.1.0/PDFQuill_0.1.0_universal.dmg',
           primary: true,
           badge: 'M1/M2/M3/M4'
         },
         {
           label: 'Intel Mac (.dmg)',
           sublabel: 'For Intel-based Mac computers',
-          url: 'https://github.com/Himal-Joshi/PDFQuill/releases/latest',
+          url: 'https://github.com/Himal-Joshi/PDFQuill/releases/download/v0.1.0/PDFQuill_0.1.0_x64.dmg',
           primary: false,
           badge: 'Intel x64'
         }
@@ -2702,14 +2702,14 @@ function DownloadView() {
         {
           label: 'AppImage (.AppImage)',
           sublabel: 'Universal single-file binary, runs on any distro',
-          url: 'https://github.com/Himal-Joshi/PDFQuill/releases/latest',
+          url: 'https://github.com/Himal-Joshi/PDFQuill/releases/download/v0.1.0/PDFQuill_0.1.0_amd64.AppImage',
           primary: true,
           badge: 'Universal'
         },
         {
           label: 'Debian / Ubuntu (.deb)',
           sublabel: 'Native package for Debian, Ubuntu, Mint',
-          url: 'https://github.com/Himal-Joshi/PDFQuill/releases/latest',
+          url: 'https://github.com/Himal-Joshi/PDFQuill/releases/download/v0.1.0/PDFQuill_0.1.0_amd64.deb',
           primary: false,
           badge: 'Debian/Ubuntu'
         }
@@ -2751,10 +2751,31 @@ function DownloadView() {
         <h2 className="text-4xl md:text-5xl font-display font-extrabold text-slate-900 dark:text-white mb-6 tracking-tight">
           Download PDFQuill for Desktop
         </h2>
-        <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed">
+        <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed mb-8">
           The full power of PDFQuill as a native, lightning-fast desktop application.
           Run completely offline with zero upload limits on Windows, macOS, and Linux.
         </p>
+
+        {/* Quick Direct Download for Detected OS */}
+        {(() => {
+          const currentPlatform = platforms.find(p => p.id === detectedOs) || platforms[0];
+          const primaryDownload = currentPlatform.downloads[0];
+          return (
+            <div className="flex flex-col items-center justify-center gap-2">
+              <a
+                href={primaryDownload.url}
+                download
+                className="btn btn-primary px-8 py-4 text-base flex items-center justify-center gap-3 shadow-xl shadow-primary/25 hover:shadow-primary/40 transition-all font-bold"
+              >
+                <Download size={20} />
+                <span>Direct Download for {currentPlatform.name} ({primaryDownload.badge})</span>
+              </a>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Detected <strong>{currentPlatform.name}</strong> • v0.1.0 • Standalone Offline App
+              </p>
+            </div>
+          );
+        })()}
       </div>
 
       {/* OS Cards */}
@@ -2798,8 +2819,7 @@ function DownloadView() {
                   <a
                     key={d.label}
                     href={d.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    download
                     className={cn(
                       "group flex flex-col p-3.5 rounded-xl border transition-all text-left w-full",
                       d.primary
