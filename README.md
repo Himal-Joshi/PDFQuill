@@ -47,10 +47,7 @@ Start the local development server:
 npm run dev
 ```
 
-Open the Vite URL shown in your terminal, usually `http://localhost:5173`.
-
-> **⚠️ Firebase Authentication Note for Local Development:**
-> Localhost has been removed from the authorized domains in the Firebase Console for security purposes. As a result, the "Sign in with Google" functionality and access to premium tools will **not work on `localhost`**. Authentication will only function correctly on the authorized production domains (e.g., `pdfquill.com.np`, `pdfquill.vercel.app`, GitHub Pages).
+Open the development URL shown in your terminal.
 
 ## Scripts (Inside `webapp/client`)
 
